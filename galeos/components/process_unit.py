@@ -4,13 +4,7 @@ class ProcessUnit(ComponentManager):
     
     _instances = []
     _object_count = 0
-    """
-    - Attributes:
-  - CPU capacity
-  - Memory capacity
-  - Storage capacity
-  - Energy consumption
-    """
+   
     def __init__(
             self,
             id : int = 0,
@@ -41,20 +35,8 @@ class ProcessUnit(ComponentManager):
         
         self.architecture = architecture
         
-        
-        # Process Unit coordinates
-        self.coordinates_trace = []
-        self.coordinates = coordinates
-        
-        # Process Unit models
-        self.mobility_model = None
-        self.mobility_model_parameters = {}
-        
         self.power_generation_model = None
         self.power_generation_model_parameters = {}
-        
-        self.power_consumption_model = None
-        self.power_consumption_model_parameters = {}
         
         self.power_consumption_model = None
         self.power_consumption_model_parameters = {}
@@ -93,12 +75,10 @@ class ProcessUnit(ComponentManager):
             "coordinates" : self.coordinates,
             "coordinates_trace" : self.coordinates_trace,
             "available" : self.available,
-            "mobility_model_parameters" : self.mobility_model_parameters,
             "power_generation_model_parameters" : self.power_generation_model_parameters,
             "power_consumption_model_parameters" :self.power_consumption_model_parameters,
             
             "relationships" :{
-                "mobility_model" : self.mobility_model.__name__ if self.mobility_model else None,
                 "power_generation_model" : self.power_generation_model.__name__ if self.power_generation_model else None,
                 "power_consumption_model" : self.power_consumption_model.__name__ if self.power_consumption_model else None,
                 "failure_model" : self.failure_model.__name__ if self.failure_model else None,
