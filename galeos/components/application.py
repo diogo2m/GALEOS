@@ -2,6 +2,7 @@
 from galeos.component_manager import ComponentManager
 
 from typing import List
+import networkx as nx
 
 class Application(ComponentManager):
     
@@ -46,25 +47,50 @@ class Application(ComponentManager):
         self.architectural_demands = architectural_demands
         
         self.user = None
-        self.server = None
+        self.process_unit = None
         
         self.migrations = []
         self._available = False  
         self.being_provisioned = False
-        
-        self.model = None
-        
+                
     
     def step(self):
-        pass
+       pass
     
-    
+
     def export(self):
-        pass
+        """ Method that generates a representation of the object in dictionary format to save current context
+        """
+        return {
+            "id" : self.id,
+            "cpu_demand" : self.cpu_demand,
+            "memory_demand" : self.memory_demand,
+            "storage_demand" : self.storage_demand,
+            "state" : self.state,
+            "sla" : self.sla,
+            "dependency_labels" : self.dependency_labels,
+            "architectural_demands" : self.architectural_demands,
+            "relationships" :{
+                "user" : {"id" : self.user.id, "class" : type(self.user).__name__} if self.user else None,
+                "process_unit" : {"id" : self.process_unit.id, "class" : type(self.process_unit).__name__} if self.process_unit else None,
+            }
+        }
     
-    def provision(self, server):
-        pass
-    
+    def provision(self, process_unit : object):
+        # Enables the flag that the service is being provisioned
+        self.being_provisioned = True
+        
+        
+        process_unit.cpu_demand += self.cpu_demand
+        process_unit.memory_demand += self.memory_demand
+        
+        self.migrations.append({
+            "status" : "waiting",
+            "origin" : self.process_unit,
+            "target" : process_unit,
+            "start" : self.model.schedule.steps + 1,
+            "end" : None
+        })
     
     
     

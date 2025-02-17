@@ -24,6 +24,7 @@ class ProcessUnit(ComponentManager):
         self.id = id 
         
         self.model_name = model_name
+        self.coordinates = coordinates
         
         self.cpu = cpu
         self.memory = memory
@@ -44,26 +45,18 @@ class ProcessUnit(ComponentManager):
         self.failure_model = None
         self.failure_model_parameters = {}
         
-        # Registries and applications hosted by the edge server
-        self.registries = []
+        
         self.applications = []
         
-        # Network device to which the Process Unit is conneccted
-        self.network_access_point = None
+        self.links = []
         
-        # Edge server's availability status
+        # Process Unit availability status
         self.available = True
 
-        # Dependency waiting queue
-        self.waiting_queue = []
-        
-        # Dependency download queue
-        self.download_queue = []
-       
+      
        
     def export(self) -> dict:
         """ Method that generates a representation of the object in dictionary format to save current context
-        
         """
         component = {
             "id" : self.id,
@@ -73,25 +66,22 @@ class ProcessUnit(ComponentManager):
             "model_name" : self.model_name,
             "architecture" : self.architecture,
             "coordinates" : self.coordinates,
-            "coordinates_trace" : self.coordinates_trace,
             "available" : self.available,
             "power_generation_model_parameters" : self.power_generation_model_parameters,
             "power_consumption_model_parameters" :self.power_consumption_model_parameters,
-            
             "relationships" :{
                 "power_generation_model" : self.power_generation_model.__name__ if self.power_generation_model else None,
                 "power_consumption_model" : self.power_consumption_model.__name__ if self.power_consumption_model else None,
                 "failure_model" : self.failure_model.__name__ if self.failure_model else None,
-                "network_access_point" : { "id" : self.network_access_point.id, "class" : self.network_access_point.__name__} if self.network_access_point else None,
-                "registries" : [
-                    {
-                        "class" : registry.__name__,
-                        "id" : registry.id
-                    } for registry in self.registries
+                "links" : [
+                    { 
+                        "id" : link.id, 
+                        "class" : type(link).__name__
+                    } for link in self.links
                 ],
                 "applications" : [
                     {
-                        "class" : app.__name__,
+                        "class" : type(app).__name__,
                         "id" : app.id
                     } for app in self.applications
                 ]
