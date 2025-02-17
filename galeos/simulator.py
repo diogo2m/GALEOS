@@ -3,6 +3,7 @@ from .components import*
 
 # Python modules
 from typing import Callable
+import gzip
 import json
 import os
 
@@ -69,7 +70,7 @@ class Simulator(ComponentManager):
         
         ComponentManager.model = self
     
-    def initialize(dataset : str):
+    def initialize(self, dataset : str):
         for component_class in ComponentManager.__subclasses__():
             if component_class.__name__ != "Simulator":
                 globals()[component_class.__name__].clear()
@@ -114,16 +115,30 @@ class Simulator(ComponentManager):
                 elif value is None: 
                     setattr(obj, key, None)
 
-        # TODO: 
-        # Configure the ground topology 
         
+        self.topology = Topology()
+        
+        for link in NetworkLink.all():
+            topology.add_node(link["nodes"][0])
+            topology.add_node(link["nodes"][1])
+            
+            topology.add_edge(link["nodes"])
+            
+            topology._adj[link.nodes[0]][link.nodes[1]] = link
+            topology._adj[link.nodes[1]][link.nodes[0]] = link
+        
+        def initialize_logs(self) -> None:
+            for component_class in ComponentManager.__subclasses__():
+                if component_class not in self.ignore_list  + [self.__class__]:
+                    pass
+                    
+            
         def step(self) -> None:
             # Updating satellite networks
             self.topology_management_algorithm(self.topology_management_parameters)
-            
-            self.resource_management_algorithm(self.resource_management_parameters)
-            
+                
             self.scheduler.step()
+            
         
         def monitor(self) ->None:
             """ Method that collects from components
