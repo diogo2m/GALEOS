@@ -18,6 +18,9 @@ class ComponentManager:
         """
         return f"{self.__class__.__name__}_{self.id}"
     
+    
+    def export(self) -> dict:
+        return {"id" :  self.id}    
 
     def collect_metrics(self):
         """ Defines the object metrics collection
@@ -41,6 +44,7 @@ class ComponentManager:
         for attribute_name, attribute_value in attributes.items():
             if attribute_name != 'relationships':
                 setattr(self, attribute_name, attribute_value)
+        
         
     @classmethod
     def find_by(cls, attribute_name : str, value : object) -> object:
@@ -75,18 +79,25 @@ class ComponentManager:
 
         cls._instances.remove(obj)
         
+        
     @classmethod
     def save_scenary(cls, ignore_list : list = [], filename : str = "dataset.json") -> dict:
         """ Method that exports the context of components of interest
         """
+        from .simulator import Simulator, Topology
+        
         scenary = {}
+        ignore_list += [Simulator, Topology]
         
         for component_class in cls.__subclasses__():
             if component_class not in ignore_list:
                 components = []
                 
                 for component in component_class.all():
-                    components.append(component.export())
+                    component_context = component.export()
+                    
+                    if component_context:
+                        components.append(component_context)
                     
                 scenary[component_class.__name__] =  components
                 
