@@ -7,7 +7,8 @@ class User(ComponentManager):
     
     def __init__(
             self,
-            id : int = 0
+            id : int = 0,
+            coordinates : tuple = None
         ):
         
         # Adding the object to the instance list
@@ -23,7 +24,7 @@ class User(ComponentManager):
         
         # User coordinates
         self.coordinates_trace = []
-        self.coordinates = None
+        self.coordinates = coordinates
         
         # User mobility model
         self.mobility_model = None
@@ -48,8 +49,8 @@ class User(ComponentManager):
             "mobility_model_parameters" : self.mobility_model_parameters ,
             "applications_access_model_parameters" :  self.applications_access_model_parameters,
             "relationships" : {
-                "mobility_model" : self.mobility_model.__name__,
-                "application_access_model" : self.applications_access_model.__name__ ,
+                "mobility_model" : self.mobility_model.__name__ if self.mobility_model else "",
+                "application_access_model" : self.applications_access_model.__name__ if self.mobility_model else "",
                 "applications" : [{"class" : type(app).__name__, 'id' : app.id} for app in self.applications] 
             }
         }

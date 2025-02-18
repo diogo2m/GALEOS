@@ -8,6 +8,7 @@ class Satellite(ComponentManager):
     def __init__(
             self, 
             id: int = 0,
+            name: str = "",
             coordinates : tuple = None,
             wireless_delay : int = 0
             
@@ -19,6 +20,8 @@ class Satellite(ComponentManager):
         if id == 0:
             id = self.__class__._object_count
         self.id = id
+
+        self.name = name if name else f"Satellite {id}"
 
         self.links = []
         self.process_unit = None
@@ -45,13 +48,13 @@ class Satellite(ComponentManager):
         
             
     def export(self):
-        context = {
+        return {
             "id" : self.id,
             "coordinates" : self.coordinates,
             "active" : self.active,
             "power" : self.power,
             "min_power" : self.min_power,
-            "wireless" : self.wireless,
+            "wireless_delay" : self.wireless_delay,
             "mobility_model_parameters" : self.mobility_model_parameters,
             "power_consumption_model_parameters" : self.power_consumption_model_parameters,
             "power_generate_model_parameters" : self.power_generation_model_parameters,
