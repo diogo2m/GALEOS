@@ -5,6 +5,8 @@ import json
 import math
 from geopy.distance import geodesic
 from time import sleep
+from server.satellite_tracker_gui import SatelliteTrackerGUI
+import argparse
 from galeos.components import User, GroundStation, ProcessUnit, Satellite
 import argparse
 
@@ -190,7 +192,7 @@ class DatasetGenerator:
         return data
 
 def linear_estimation(sat, step):
-    last_lat, last_lon = sat["mobility_model"]["parameters"]["last_coordinate"]
+    last_lat, last_lon = sat["mobility_model_parameters"]["last_coordinate"]
     new_lat, new_lon = sat["coordinates"]
 
     # Get points distance in miles
@@ -202,14 +204,14 @@ def linear_estimation(sat, step):
     speed_ew /= (69 * abs(math.cos(math.radians(last_lat))))
 
     # Update coordinates
-    sat["mobility_model"]["parameters"]["last_coordinate"] = sat["coordinates"].copy()
+    sat["mobility_model_parameters"]["last_coordinate"] = sat["coordinates"].copy()
     new_lat = (new_lat + speed_ns + 85) % 170 - 85
     new_lon = (new_lon + speed_ew + 180) % 360 - 180
 
     sat["coordinates"] = [new_lat, new_lon]
 
 def coordinates_history(sat, step):
-    coordinates = sat["mobility_model"]["parameters"]["next_coordinates"]
+    coordinates = sat["mobility_model_parameters"]["next_coordinates"]
     sat["coordinates"] = coordinates[step%len(coordinates)]
 
 def parse_args():
@@ -220,14 +222,36 @@ def parse_args():
     return parser.parse_args()
 
 if __name__ == "__main__":
-    args = parse_args()
+    dataset_path = None
+    dataset_path = "dataset.json"
 
-    ground_stations = DatasetGenerator.ground_station(args.ground_stations)
-    users = DatasetGenerator.user(max_users=1000, max_distance_from_ground_station=1000, min_users=100, max_users_per_ground_station=100, min_users_per_ground_station=10)
-    servers = DatasetGenerator.server(min_process_units=100, max_distance_from_ground_station=1000, max_process_units=1000, min_process_units_per_ground_station=10, max_process_units_per_ground_station=100)
+    if not dataset_path:
+        ground_stations = DatasetGenerator.ground_station("dataset_generator/t.gml")
+        # satellites = DatasetGenerator.get_satellites_from_api([0, 0, 0], 1000, 52, 10)
+        satellites = DatasetGenerator.get_real_satellite_estimated_trajectory([0, 0, 0], 100, 1, collect_sleep_time=5)
+        # satellites = DatasetGenerator.get_real_satellites_trajectory(coordinates=[0, 0, 0], sat_range=100, executions=5, collect_sleep_time=5)
+        users = DatasetGenerator.user(max_users=1000, max_distance_from_ground_station=1000, min_users=100, max_users_per_ground_station=100, min_users_per_ground_station=10)
+        servers = DatasetGenerator.server(min_process_units=100, max_distance_from_ground_station=1000, max_process_units=1000, min_process_units_per_ground_station=10, max_process_units_per_ground_station=100)
 
-    # satellites = DatasetGenerator.get_satellites_from_api([0, 0, 0], 1000, 52, 10)
-    # satellites = DatasetGenerator.get_real_satellite_estimated_trajectory([0, 0, 0], 100, 1, collect_sleep_time=5)
-    satellites = DatasetGenerator.get_real_satellites_trajectory(coordinates=ground_stations[0].coordinates, sat_range=100, executions=5, collect_sleep_time=5)
+    if dataset_path:
+        with open(dataset_path) as f:
+            data = json.load(f)
+    else:
+        DatasetGenerator.export("dataset.json")
+        data = DatasetGenerator.export()
 
-    DatasetGenerator.export(args.output)
+    SatelliteTrackerGUI.run_deamon()
+    sleep(2)
+
+    for step in range(10000000000):
+        for sat in data["satellites"]:
+            globals()[sat["relationships"]["mobility_model"]](sat, step)
+            
+        SatelliteTrackerGUI.data = data
+        sleep(0.01)
+
+    SatelliteTrackerGUI.stop_deamon()
+
+    # satellite(method="api")
+    # satellite(method="generate", max_satellites=10, number_of_process_satellites=8, min_cpu_availability=0.5, min_memory_availability=0.5, max_cpu_availability=0.9, max_memory_availability=0.9)
+

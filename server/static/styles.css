@@ -1,0 +1,68 @@
+/* Basic reset and styles for a modern look */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a1a;
+    color: white;
+}
+
+h1 {
+    display: flex;
+    font-family: "DM Sans", Helvetica, sans-serif;
+    font-size: 1.6rem;
+    font-weight: bold;
+    text-align: center;
+    background-color: #000000;
+    margin: auto;
+    color: #ffffff;
+    align-items: center;
+    justify-content: center;
+    height: 9vh;
+}
+
+#map {
+    height: 90vh;
+    border-top: 1px solid #444;
+}
+
+.title {
+    text-align: center;
+    color: #fff;
+    font-size: 24px;
+    margin-top: 20px;
+}
+
+/* Styling map container */
+.leaflet-container {
+    background-color: #333;
+    border-radius: 8px;
+}
+
+/* Marker customization */
+.leaflet-popup-content {
+    color: #000;
+}
+
+.leaflet-popup {
+    background-color: #fff;
+    color: #000;
+    border-radius: 8px;
+}
+
+/* Button styles for any controls or actions */
+button {
+    background-color: #00d1b2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #00b09b;
+}
