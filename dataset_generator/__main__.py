@@ -6,6 +6,7 @@ import math
 from geopy.distance import geodesic
 from time import sleep
 from galeos.components import User, GroundStation, ProcessUnit, Satellite
+import argparse
 
 next_id = 0
 
@@ -115,7 +116,7 @@ class DatasetGenerator:
 
     @classmethod
     def get_satellites_from_api(cls, coordinates, sat_range, api_category: int=52, max_satellites: int=None) -> dict:
-        API_URL = f"https://api.n2yo.com/rest/v1/satellite/above/{coordinates[0]}/{coordinates[1]}/{coordinates[2] or 0}/{sat_range}/{api_category}/&apiKey={cls.n2yo_api_key}"
+        API_URL = f"https://api.n2yo.com/rest/v1/satellite/above/{coordinates[0]}/{coordinates[1]}/{coordinates[2] if len(coordinates) > 2 else 0}/{sat_range}/{api_category}/&apiKey={cls.n2yo_api_key}"
         try:
             response = requests.get(url=API_URL)
         except:
@@ -211,13 +212,22 @@ def coordinates_history(sat, step):
     coordinates = sat["mobility_model"]["parameters"]["next_coordinates"]
     sat["coordinates"] = coordinates[step%len(coordinates)]
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Dataset Generator for Ground Stations")
+    parser.add_argument("-g", "--ground-stations", type=str, required=True, help="Path to the GML file containing ground stations")
+    parser.add_argument("-o", "--output", type=str, required=True, help="Path to the output file")
+    
+    return parser.parse_args()
+
 if __name__ == "__main__":
-    ground_stations = DatasetGenerator.ground_station("t.gml")
+    args = parse_args()
+
+    ground_stations = DatasetGenerator.ground_station(args.ground_stations)
     users = DatasetGenerator.user(max_users=1000, max_distance_from_ground_station=1000, min_users=100, max_users_per_ground_station=100, min_users_per_ground_station=10)
     servers = DatasetGenerator.server(min_process_units=100, max_distance_from_ground_station=1000, max_process_units=1000, min_process_units_per_ground_station=10, max_process_units_per_ground_station=100)
 
     # satellites = DatasetGenerator.get_satellites_from_api([0, 0, 0], 1000, 52, 10)
     # satellites = DatasetGenerator.get_real_satellite_estimated_trajectory([0, 0, 0], 100, 1, collect_sleep_time=5)
-    satellites = DatasetGenerator.get_real_satellites_trajectory(coordinates=[0, 0, 0], sat_range=100, executions=5, collect_sleep_time=5)
+    satellites = DatasetGenerator.get_real_satellites_trajectory(coordinates=ground_stations[0].coordinates, sat_range=100, executions=5, collect_sleep_time=5)
 
-    DatasetGenerator.export("dataset.json")
+    DatasetGenerator.export(args.output)
