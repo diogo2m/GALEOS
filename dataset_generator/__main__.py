@@ -5,47 +5,9 @@ import json
 import math
 from geopy.distance import geodesic
 from time import sleep
+from galeos.components import User, GroundStation, ProcessUnit, Satellite
 
 next_id = 0
-
-def create_ground_station(name, coordinates, relationship: dict={}):
-    global next_id
-    next_id += 1
-    return {
-        "id": next_id,
-        "name": name,
-        "coordinates": coordinates,
-        "relationship": relationship
-    }
-
-def create_user(name, coordinates, relationship: dict={}):
-    global next_id
-    next_id += 1
-    return {
-        "id": next_id,
-        "name": name,
-        "coordinates": coordinates,
-        "applications": [],
-        "mobility_model": {
-            "name": None,
-            "parameters": {}
-        },
-        "applications_access_model": {
-            "name": None,
-            "parameters": {}
-        },
-        "relationship": relationship
-    }
-
-def create_server(name, coordinates, relationship: dict={}):
-    global next_id
-    next_id += 1
-    return {
-        "id": next_id,
-        "name": name,
-        "coordinates": coordinates,
-        "relationship": relationship
-    }
 
 def create_satellite(name, coordinates, relationship: dict={}):
     global next_id
@@ -59,18 +21,6 @@ def create_satellite(name, coordinates, relationship: dict={}):
             "name": "",
             "parameters": {}
         }
-    }
-
-def create_process_unit(name, cpu, memory, relationship: dict={}):
-    global next_id
-    next_id += 1
-    return {
-        "id": next_id,
-        "name": name,
-        "cpu": cpu,
-        "memory": memory,
-        "coordinates": coordinates,
-        "relationship": relationship
     }
 
 def create_application(name, cpu, memory, storage, relationship, sla=None, dependencies=[], architectural_demands=[]):
@@ -91,6 +41,12 @@ def create_application(name, cpu, memory, storage, relationship, sla=None, depen
 def coordinates_generate_nearby(coordinates, max_distance):
     return [coordinates[0] + randint(-max_distance, max_distance), coordinates[1] + randint(-max_distance, max_distance)]
 
+def create_empty_function(name):
+    def func():
+        pass
+    func.__name__ = name
+    return func
+
 class DatasetGenerator:
     ground_stations = []
     satellites = []
@@ -107,7 +63,7 @@ class DatasetGenerator:
             if not G.nodes[node].get("Country"):
                 continue
 
-            cls.ground_stations.append(create_ground_station(node, [G.nodes[node]["Latitude"], G.nodes[node]["Longitude"]], relationship={"process_unit": [i]}))    
+            cls.ground_stations.append(GroundStation(coordinates=(G.nodes[node]["Latitude"], G.nodes[node]["Longitude"])))    
         return cls.ground_stations
 
     @classmethod
@@ -119,7 +75,7 @@ class DatasetGenerator:
 
         # Fulfill the minimum number of users per ground station
         for ground_station in cls.ground_stations:
-            cls.users.extend([ create_user(ground_station["name"], coordinates_generate_nearby(ground_station["coordinates"], max_distance_from_ground_station)) for _ in range(min_users_per_ground_station) ])
+            cls.users.extend([ User(coordinates=coordinates_generate_nearby(ground_station.coordinates, max_distance_from_ground_station)) for _ in range(min_users_per_ground_station) ])
 
         number_of_users -= len(cls.users)
         
@@ -128,7 +84,7 @@ class DatasetGenerator:
             ground_station = cls.ground_stations[randint(0, len(cls.ground_stations)-1)]
             number_of_new_users = randint(0, number_of_users)
 
-            cls.users.extend([ create_user(ground_station["name"], coordinates_generate_nearby(ground_station["coordinates"], max_distance_from_ground_station)) for _ in range(number_of_new_users) ])
+            cls.users.extend([ User(coordinates=coordinates_generate_nearby(ground_station.coordinates, max_distance_from_ground_station)) for _ in range(number_of_new_users) ])
             number_of_users -= number_of_new_users
 
         return cls.users
@@ -143,7 +99,8 @@ class DatasetGenerator:
 
         # Fulfill the minimum number of servers per ground station
         for ground_station in cls.ground_stations:
-            cls.servers.extend([ create_server(ground_station["name"], coordinates_generate_nearby(ground_station["coordinates"], max_distance=max_distance_from_ground_station), relationship={"process_unit": [number_of_process_units]}) for _ in range(min_process_units_per_ground_station) ])
+            cls.servers.extend([ ProcessUnit(cpu=100, memory=100, storage=100, coordinates=coordinates_generate_nearby(ground_station.coordinates, max_distance=max_distance_from_ground_station)) for _ in range(min_process_units_per_ground_station) ])
+                
             number_of_process_units -= min_process_units_per_ground_station
         
         # Creating servers close to a random ground station
@@ -151,7 +108,7 @@ class DatasetGenerator:
             ground_station = cls.ground_stations[randint(0, len(cls.ground_stations)-1)]
             number_of_new_process_units = randint(0, number_of_process_units)
 
-            cls.servers.extend([ create_server(ground_station["name"], coordinates_generate_nearby(ground_station["coordinates"], max_distance=max_distance_from_ground_station), relationship={"process_unit": [number_of_process_units]}) for _ in range(number_of_new_process_units) ])
+            cls.servers.extend([ ProcessUnit(cpu=100, memory=100, storage=100, coordinates=coordinates_generate_nearby(ground_station.coordinates, max_distance=max_distance_from_ground_station)) for _ in range(min_process_units_per_ground_station) ])
             number_of_process_units -= 1
 
         return cls.servers
@@ -165,7 +122,7 @@ class DatasetGenerator:
             print("Unable to grab satellites from API")
             return
         for satellite in response.json()["above"][:max_satellites]:
-            cls.satellites.append(create_satellite(name=satellite["satname"], coordinates=[satellite["satlat"], satellite["satlng"]]))
+            cls.satellites.append(Satellite(name=satellite["satname"], coordinates=(satellite["satlat"], satellite["satlng"])))
         return cls.satellites
     
     @classmethod
@@ -174,47 +131,53 @@ class DatasetGenerator:
         satellites = []
 
         for i in range(executions):
-            data.append({sat["name"]: sat for sat in cls.get_satellites_from_api(coordinates, sat_range, api_category)})
+            data.append({sat.name: sat for sat in cls.get_satellites_from_api(coordinates, sat_range, api_category)})
             sleep(collect_sleep_time)
             
             for sat in data[i].values():
-                if sat["id"] not in [s["id"] for s in satellites]:
+                if sat.id not in [s.id for s in satellites]:
                     satellites.append(sat)
 
         satellites = satellites[:max_satellites]
 
         for sat in satellites:
-            sat["mobility_model"]["name"] = "coordinates_history"
-            sat["mobility_model"]["parameters"]["next_coordinates"] = []  
+            sat.mobility_model = create_empty_function("coordinates_history")
+            sat.mobility_model_parameters = {"next_coordinates": []}  
             for i, step in enumerate(data):
-                sat["mobility_model"]["parameters"]["next_coordinates"].append(None)
-                if step.get(sat["name"]):
-                    sat["mobility_model"]["parameters"]["next_coordinates"][i] = step[sat["name"]]["coordinates"]
+                sat.mobility_model_parameters["next_coordinates"].append(None)
+                if step.get(sat.name):
+                    sat.mobility_model_parameters["next_coordinates"][i] = step[sat.name].coordinates
         
         return satellites
 
     @classmethod
     def get_real_satellite_estimated_trajectory(cls, coordinates, sat_range, executions, collect_sleep_time=60, api_category: int=52, max_satellites: int=None):
         for _ in range(executions):
-            satellites = { sat['name']: sat for sat in cls.get_satellites_from_api(coordinates, sat_range) }
+            satellites = { sat.name: sat for sat in cls.get_satellites_from_api(coordinates, sat_range) }
             cls.satellites = []
             sleep(collect_sleep_time)
             for satellite in cls.get_satellites_from_api(coordinates, sat_range):
-                if satellites.get(satellite['name']):
-                    first_coordinate = satellites[satellite['name']]['coordinates']
-                    second_coordinate = satellite['coordinates']
+                if satellites.get(satellite.name):
+                    first_coordinate = satellites[satellite.name].coordinates
+                    second_coordinate = satellite.coordinates
 
-                    satellites[satellite['name']]["coordinates"] = second_coordinate.copy()
+                    satellites[satellite.name].coordinates = second_coordinate
 
-                    satellites[satellite['name']]["mobility_model"] = {}
-                    satellites[satellite['name']]["mobility_model"]["name"] = "linear_estimation"
-                    satellites[satellite['name']]["mobility_model"]["parameters"] = {"last_coordinate": first_coordinate.copy()}
+                    satellites[satellite.name].mobility_model = create_empty_function("linear_estimation")
+                    satellites[satellite.name].mobility_model_parameters = {"last_coordinate": first_coordinate}
                 
-                cls.satellites = [ sat for sat in satellites.values() if sat.get("mobility_model")]
+                cls.satellites = [ sat for sat in satellites.values() if sat.mobility_model ]
         
     @classmethod
     def export(cls, filepath: str=None):
-        attributes = {att: cls.__dict__[att] for att in cls.__dict__ if not att.startswith("__") and isinstance(cls.__dict__[att], list)}
+        data = {}
+        for att in cls.__dict__:
+            if att.startswith("__") or not isinstance(cls.__dict__[att], list):
+                continue
+
+            data[att] = []
+            for obj in cls.__dict__[att]:
+                data[att].append(obj.export())
 
         if filepath:
             if not filepath.endswith(".json"):
@@ -222,8 +185,8 @@ class DatasetGenerator:
 
             # Saves all class attributes in a file
             with open(filepath, "w") as json_file:
-                json.dump(attributes, json_file, indent=4)
-        return attributes
+                json.dump(data, json_file, indent=4)
+        return data
 
 def linear_estimation(sat, step):
     last_lat, last_lon = sat["mobility_model"]["parameters"]["last_coordinate"]
