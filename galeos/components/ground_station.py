@@ -37,7 +37,7 @@ class GroundStation(ComponentManager):
         return {
             "id" : self.id,
             "coordinates" : self.coordinates,
-            "wireless_delay" : self.coordinates,
+            "wireless_delay" : self.wireless_delay,
             "connection_range" : self.connection_range,
             "relationships" : {
                 "links" : [
