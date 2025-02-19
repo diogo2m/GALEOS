@@ -34,7 +34,7 @@ class GroundStation(ComponentManager):
     def export(self):
         """ Method that generates a representation of the object in dictionary format to save current context
         """
-        return {
+        component = {
             "id" : self.id,
             "coordinates" : self.coordinates,
             "wireless_delay" : self.wireless_delay,
@@ -48,6 +48,8 @@ class GroundStation(ComponentManager):
                 ]
             }
         }
+        
+        return component
     
     
     def step(self):

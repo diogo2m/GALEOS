@@ -29,6 +29,7 @@ class ProcessUnit(ComponentManager):
         self.cpu = cpu
         self.memory = memory
         self.storage = storage
+        self.power = 0
         
         self.cpu_demand = 0
         self.memory_demand = 0
@@ -53,6 +54,9 @@ class ProcessUnit(ComponentManager):
         # Process Unit availability status
         self.available = True
 
+    
+    def step(self):
+        pass
       
        
     def export(self) -> dict:
@@ -63,6 +67,7 @@ class ProcessUnit(ComponentManager):
             "cpu" : self.cpu,
             "memory" : self.memory,
             "storage" : self.storage,
+            "power" : self.power,
             "model_name" : self.model_name,
             "architecture" : self.architecture,
             "coordinates" : self.coordinates,

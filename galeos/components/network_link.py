@@ -32,21 +32,24 @@ class NetworkLink(ComponentManager, dict):
         self["flows"] = []
         
         self["active"] = True
+        self['type'] = 'default'
         
         
     def export(self) -> dict: 
         """ Method that generates a representation of the object in dictionary format to save current context
         """   
-        
-        return {
+        component = {
             "id" : self['id'],
             "delay" : self['delay'],
             'active' : self['active'],
             'bandwidth' : self['bandwidth'],
+            'type' : self['type'],
             'relationships' : {
                 "flows" : [ {"class" : type(flow).__class__, "id" : flow.id} for flow in self['flows']]
             }
         }
+        
+        return component
         
         
     def __getattr__(self, attribute_name: str):  

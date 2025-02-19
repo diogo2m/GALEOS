@@ -107,7 +107,7 @@ class Application(ComponentManager):
     def export(self):
         """ Method that generates a representation of the object in dictionary format to save current context
         """
-        attributes = {
+        component = {
             "id" : self.id,
             "cpu_demand" : self.cpu_demand,
             "memory_demand" : self.memory_demand,
@@ -122,7 +122,7 @@ class Application(ComponentManager):
             }
         }
 
-        return attributes
+        return component
     
     
     def provision(self, process_unit : object):

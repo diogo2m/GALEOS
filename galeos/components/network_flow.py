@@ -52,7 +52,9 @@ class NetworkFlow(ComponentManager):
             self.last_bandwidth[link] = 0
             
     def export(self) -> dict:
-        return {
+        """ Method that generates a representation of the object in dictionary format to save current context
+        """  
+        component = {
             "id": self.id,
             "status": self.status,
             "nodes": [{"class": type(node).__name__, "id": node.id} for node in self.nodes],
@@ -63,4 +65,6 @@ class NetworkFlow(ComponentManager):
             "bandwidth": self.bandwidth,
             "metadata": self.metadata,
         }
+        
+        return component
         

@@ -41,7 +41,7 @@ class User(ComponentManager):
         
         
     def export(self):
-        return {
+        attributes = {
             "id" : self.id,
             "coordinates" : self.coordinates,
             "delays" : self.delays,
@@ -55,6 +55,7 @@ class User(ComponentManager):
             }
         }
         
+        return attributes
         
     def set_mobility_model(self, model : callable, parameters : dict) -> None:
         self.mobility_model = model

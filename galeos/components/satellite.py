@@ -29,9 +29,11 @@ class Satellite(ComponentManager):
         self.wireless_delay = wireless_delay
         self.power = 0
         self.min_power = 0
+
         
         # Satelite coordinates
         self.coordinates = coordinates
+        self.coordinates_trace = []
         
         # Satelite models
         self.mobility_model = None
@@ -46,9 +48,50 @@ class Satellite(ComponentManager):
         self.failure_model = None
         self.failure_model_parameters = {}
         
+    
+    
+    def step(self) -> None:
+        new_coordinates = self.mobility_model(self, **self.mobility_model_parameters)
+        
+        self.coordinates = new_coordinates
+        
+        # Verificar se houve uma nova falha
+        failure_occurred = False
+        if self.failure_model:
+            failure_occurred = self.failure_model(self, **self.failure_model_parameters)
+            if failure_occurred:
+                self.active = False
+            else: 
+                self.active = True
+        
+        # Gerar energia
+        energy_generated = 0
+        if self.power_generation_model:
+            energy_generated = self.power_generation_model(self, **self.power_generation_model_parameters)
+        self.power += energy_generated
+        
+        # Consumir energia
+        energy_consumed = 0
+        if self.power_consumption_model:
+            energy_consumed = self.power_consumption_model(self, **self.power_consumption_model_parameters)
+        self.power -= energy_consumed
+        
+        if self.power < self.min_power:
+            self.active = False
+            
+            if self.process_unit:
+                self.process_unit.available = True
+            
+        elif not failure_occurred and not self.active:
+            self.active = True
+        
+        
+            
             
     def export(self):
-        return {
+        """ Method that generates a representation of the object in dictionary format to save current context
+        """  
+        component = {
             "id" : self.id,
             "coordinates" : self.coordinates,
             "active" : self.active,
@@ -77,3 +120,5 @@ class Satellite(ComponentManager):
                 
             }
         }
+        
+        return component
