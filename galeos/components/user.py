@@ -1,4 +1,4 @@
-from galeos.component_manager import ComponentManager
+from ..component_manager import ComponentManager
 
 
 class User(ComponentManager):

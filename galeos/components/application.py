@@ -1,5 +1,5 @@
 # Simulator components
-from galeos.component_manager import ComponentManager
+from ..component_manager import ComponentManager
 
 from typing import List
 import networkx as nx
