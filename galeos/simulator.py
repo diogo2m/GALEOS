@@ -127,64 +127,64 @@ class Simulator(ComponentManager):
             topology._adj[link.nodes[0]][link.nodes[1]] = link
             topology._adj[link.nodes[1]][link.nodes[0]] = link
         
-        def initialize_logs(self) -> None:
-            for component_class in ComponentManager.__subclasses__():
-                if component_class not in self.ignore_list  + [self.__class__]:
-                    pass
+    def initialize_logs(self) -> None:
+        for component_class in ComponentManager.__subclasses__():
+            if component_class not in self.ignore_list  + [self.__class__]:
+                pass
                     
             
-        def step(self) -> None:
-            # Updating satellite networks
-            self.topology_management_algorithm(self.topology_management_parameters)
-                
-            self.scheduler.step()
+    def step(self) -> None:
+        # Updating satellite networks
+        self.topology_management_algorithm(self.topology_management_parameters)
+            
+        self.scheduler.step()
             
         
-        def monitor(self) ->None:
-            """ Method that collects from components
-            """
-            for component_class in ComponentManager.__subclasses__():
-                if component_class not in self.ignore_list  + [self.__class__]:
-                    if component_class.__name__ not in self.agent_metrics:
-                        self.agent_metrics[component_class.__name__] = {}
+    def monitor(self) ->None:
+        """ Method that collects from components
+        """
+        for component_class in ComponentManager.__subclasses__():
+            if component_class not in self.ignore_list  + [self.__class__]:
+                if component_class.__name__ not in self.agent_metrics:
+                    self.agent_metrics[component_class.__name__] = {}
+                    
+                    metrics = []
+                    
+                    for component in component_class.all():
+                        metrics.append(component.collect())
                         
-                        metrics = []
-                        
-                        for component in component_class.all():
-                            metrics.append(component.collect())
-                            
-                        self.agent_metrics[component_class.__name__][self.schedule.steps] = metrics
-            
-            if self.schedule.steps == self.last_dump + self.dump_interval:
-                self.dump_data()
-                self.last_dump = self.schedule.steps
-                            
-                            
-        def dump_data(self) -> None:
-            if not os.path.exists(f"{self.logs_directory}/"):
-                os.makedirs(f"{self.logs_directory}")  
-            
-            for agent_class, value in self.agent_metrics.items():
-                # TODO :  Discuss how to save the files (e.g. json, json+gzip, msgpack)
-                pass
-            
-                if self.clean_data_in_memory:
-                    self.agent_metrics[agent_class.__name__] = {}
-            
+                    self.agent_metrics[component_class.__name__][self.schedule.steps] = metrics
         
-        def run(self) -> dict:
-            """ Execute the model
-            """
-            self.running = True
-            
-            while self.running:
-                self.step()
-
-                self.monitor()
-
-                self.running = False if self.stopping_criterion(self) else True
-            
+        if self.schedule.steps == self.last_dump + self.dump_interval:
             self.dump_data()
+            self.last_dump = self.schedule.steps
+                        
+                        
+    def dump_data(self) -> None:
+        if not os.path.exists(f"{self.logs_directory}/"):
+            os.makedirs(f"{self.logs_directory}")  
+        
+        for agent_class, value in self.agent_metrics.items():
+            # TODO :  Discuss how to save the files (e.g. json, json+gzip, msgpack)
+            pass
+        
+            if self.clean_data_in_memory:
+                self.agent_metrics[agent_class.__name__] = {}
+            
+        
+    def run(self) -> dict:
+        """ Execute the model
+        """
+        self.running = True
+            
+        while self.running:
+            self.step()
+
+            self.monitor()
+            
+            self.running = False if self.stopping_criterion(self) else True
+            
+        self.dump_data()
         
 
             
