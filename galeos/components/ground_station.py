@@ -12,7 +12,7 @@ class GroundStation(ComponentManager):
             id : int = 0,
             coordinates : tuple = None,
             wireless_delay : int = 0, 
-            connection_range : int = 500
+            max_connection_range : int = 500
         ):
         
         self.__class__._instances.append(self)
@@ -25,7 +25,7 @@ class GroundStation(ComponentManager):
         self.coordinates = coordinates
         
         self.wireless_delay = wireless_delay
-        self.connection_range = connection_range
+        self.max_connection_range = max_connection_range
         
         self.links = []
         self.users = []
@@ -38,7 +38,7 @@ class GroundStation(ComponentManager):
             "id" : self.id,
             "coordinates" : self.coordinates,
             "wireless_delay" : self.wireless_delay,
-            "connection_range" : self.connection_range,
+            "max_connection_range" : self.max_connection_range,
             "relationships" : {
                 "links" : [
                     {

@@ -8,7 +8,8 @@ class User(ComponentManager):
     def __init__(
             self,
             id : int = 0,
-            coordinates : tuple = None
+            coordinates : tuple = None,
+            max_connection_range : int = 500
         ):
         
         # Adding the object to the instance list
@@ -38,6 +39,7 @@ class User(ComponentManager):
         
         self.communication_paths = {}
         self.delays = {}
+        self.max_connection_range = max_connection_range
         
         
     def export(self):

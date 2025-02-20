@@ -10,7 +10,8 @@ class Satellite(ComponentManager):
             id: int = 0,
             name: str = "",
             coordinates : tuple = None,
-            wireless_delay : int = 0
+            wireless_delay : int = 0,
+            max_connection_range : int = 500
             
         ) -> object:
         
@@ -27,6 +28,7 @@ class Satellite(ComponentManager):
         self.process_unit = None
         self.active = True
         self.wireless_delay = wireless_delay
+        self.max_connection_range = max_connection_range
         self.power = 0
         self.min_power = 0
 
@@ -84,8 +86,6 @@ class Satellite(ComponentManager):
             
         elif not failure_occurred and not self.active:
             self.active = True
-        
-        
             
             
     def export(self):
@@ -98,6 +98,7 @@ class Satellite(ComponentManager):
             "power" : self.power,
             "min_power" : self.min_power,
             "wireless_delay" : self.wireless_delay,
+            "max_connection_range" : self.max_connection_range,
             "mobility_model_parameters" : self.mobility_model_parameters,
             "power_consumption_model_parameters" : self.power_consumption_model_parameters,
             "power_generate_model_parameters" : self.power_generation_model_parameters,
