@@ -9,7 +9,7 @@ import numpy as np
 import networkx as nx
 
 
-def barabasi_albert(topology, min_num_links : int = 2):
+def mesh_network(topology, min_num_links : int = 2):
 
     satellites = Satellite.all()
 
@@ -35,7 +35,7 @@ def default_topology_management(topology : object, **parameters):
     
     topology.remove_invalid_connections()
     
-    barabasi_albert(
+    mesh_network(
         topology=topology, 
         min_num_links=parameters.get('min_num_links', 2)
     )
