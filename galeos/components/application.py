@@ -11,7 +11,7 @@ class Application(ComponentManager):
     
     def __init__(
             self,
-            id : int = None,
+            id : int = 0,
             cpu_demand : int = None,
             memory_demand : int = None,
             storage_demand : int = None,
@@ -53,6 +53,27 @@ class Application(ComponentManager):
         self.available = False  
         self.being_provisioned = False
                 
+                
+    def collect_metrics(self) -> dict:
+        last_migration = self.migrations[-1].copy() if self.migrations else None
+        
+        if last_migration:
+            last_migration['target'] = str(last_migration['target'])
+            
+        metrics = {
+            "ID" : self.id,
+            "CPU Demand" : self.cpu_demand,
+            "Memory Demand" : self.memory_demand,
+            "Storage Demand" : self.storage_demand,
+            "State" : self.state,
+            "SLA" : self.sla,
+            "Available" : self.available,
+            "Being Provisioned" : self.being_provisioned,
+            "Last Migration" : last_migration
+        }
+        
+        return metrics
+    
     
     def step(self):
         if self.process_unit and not self.process_unit.available:
@@ -64,9 +85,10 @@ class Application(ComponentManager):
             migr = self.migrations[-1]
             # TODO: Implement a dependency system and manage the time in each state
             dependencies_on_process_unit = []
+            
            
             if migr["status"] == 'waiting':
-                if len(dependencies_on_process_unit) > 0:
+                if len(dependencies_on_process_unit) > 0 or len(dependencies_on_process_unit) == len(self.dependency_labels):
                     migr['status'] = 'download_dependencies'
                     
             if migr['status'] == 'download_dependencies' and len(dependencies_on_process_unit) == len(self.dependency_labels):
@@ -92,16 +114,17 @@ class Application(ComponentManager):
                 
             elif migr['status'] == "finished":
                 if migr["status"] == "finished":
-                    migr["end"] = self.model.schedule.steps + 1
+                    migr["end"] = self.model.scheduler.steps + 1
                     
                     if self.process_unit:
                         self.process_unit.applications.remove(self)
                     
+                    self.process_unit = migr['target']
                     self.process_unit.applications.append(self)
                     self.being_provisioned = False
                     self.available = True
                     
-                    #TODO: Reset the communication path with the user
+                    
     
 
     def export(self):
@@ -138,13 +161,13 @@ class Application(ComponentManager):
             "status" : "waiting",
             "origin" : self.process_unit,
             "target" : process_unit,
-            "start" : self.model.schedule.steps,
+            "start" : self.model.scheduler.steps,
             "end" : None,
             "waiting_time" : 0,
             "download_time" : 0,
             "application_state_migration_time" : 0
         })
-    
+    0
     
     
     

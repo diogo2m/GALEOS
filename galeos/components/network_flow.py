@@ -30,11 +30,9 @@ class NetworkFlow(ComponentManager):
         self.target = target
         
         self.start = start
+        self.end = None
         self.data_to_transfer = data_to_transfer
         self.metadata = metadata
-        
-        if len(path) < 2:
-            raise ValueError("Value for path attribute is invalid")
         
         self.path = path
         self.bandwidth = {}
@@ -48,8 +46,32 @@ class NetworkFlow(ComponentManager):
             
             link['flows'].append(self)
             
-            self.bandwidth[link] = 0
-            self.last_bandwidth[link] = 0
+            self.bandwidth[link.id] = 0
+            self.last_bandwidth[link.id] = 0
+    
+    
+    def collect_metrics(self) -> dict:
+        min_bw = min([bw for bw in self.bandwidth.values() if bw ], default=0)
+        
+        metrics = {
+            "ID" : self.id,
+            "Status" : self.status,
+            "Data to Transfer" : self.data_to_transfer,
+            "Start": self.start,
+            "End": self.end,
+            "Min Bandwidth" : min_bw,
+            "Bandwidth" : self.bandwidth,
+            "Path" : [str(node) for node in self.path],
+            "Type" : self.metadata['type']
+        }
+        
+        return metrics
+          
+            
+    def step(self):
+        pass
+            
+                
             
     def export(self) -> dict:
         """ Method that generates a representation of the object in dictionary format to save current context

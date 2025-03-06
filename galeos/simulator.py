@@ -3,7 +3,6 @@ from .components import*
 
 # Python modules
 from typing import Callable
-import gzip
 import json
 import os
 
@@ -21,11 +20,9 @@ class Simulator(ComponentManager):
         stopping_criterion : Callable = None,
         resource_management_algorithm : Callable = None,
         resource_management_algorithm_parameters : dict = {},
-        topology_management_algorithm : Callable = None,
+        topology_management_algorithm : Callable = default_topology_management,
         topology_management_algorithm_parameters : dict = {},
         user_defined_functions : list = [],
-        tick_duration : int = 1,
-        tick_unit : str = "seconds",
         scheduler : Callable = DefaultScheduler, 
         dump_interval : int = 100,
         logs_directory : str = "logs",
@@ -50,9 +47,9 @@ class Simulator(ComponentManager):
         self.resource_management_algorithm_parameters = resource_management_algorithm_parameters
         
         self.topology_management_algorithm = topology_management_algorithm
-        self.topology_management_algorithm_parameteres = topology_management_algorithm_parameters
+        self.topology_management_parameters = topology_management_algorithm_parameters
         
-        self.scheduler = scheduler
+        self.scheduler = scheduler(self)
         self.topology = None
         
         self.logs_directory = logs_directory
@@ -62,11 +59,12 @@ class Simulator(ComponentManager):
         
         # TODO: Customize the time unit
         
+        self.agent_metrics = {}
+        self.ignore_list = ignore_list
+        
         for function in user_defined_functions:
             globals()[function.__name__] = function
         
-        self.agent_metrics = {}
-        self.ignore_list = ignore_list
         
         ComponentManager.model = self
     
@@ -103,6 +101,15 @@ class Simulator(ComponentManager):
                     object_relation = globals()[value['class']].find_by("id", value['id'])
                     
                     setattr(obj, key, object_relation)
+                   
+                # If it is a dictionary and its values ​​are defined globally (e.g. application access dictionary)
+                elif type(value) == dict and all(( globals().get(v) for v in value.values())): 
+                    object_relation = {
+                        k : globals().get(v) for k, v in value.items()
+                    }
+                    
+                    setattr(obj, key, object_relation)
+
 
                 # If it's a list of objects of another class
                 elif type(value) == list and all(('id' in comp and 'class' in comp for comp in value)): 
@@ -118,24 +125,36 @@ class Simulator(ComponentManager):
         
         self.topology = Topology()
         
-        for link in NetworkLink.all():
-            topology.add_node(link["nodes"][0])
-            topology.add_node(link["nodes"][1])
+        for agent in GroundStation.all() + Satellite.all() + ProcessUnit.all():
+            self.topology.add_node(agent)
+        
+        for link in NetworkLink.all():            
+            self.topology.add_edge(link["nodes"][0], link['nodes'][1])
             
-            topology.add_edge(link["nodes"])
+            self.topology._adj[link["nodes"][0]][link["nodes"][1]] = link
+            self.topology._adj[link["nodes"][1]][link["nodes"][0]] = link
+    
             
-            topology._adj[link.nodes[0]][link.nodes[1]] = link
-            topology._adj[link.nodes[1]][link.nodes[0]] = link
         
     def initialize_logs(self) -> None:
         for component_class in ComponentManager.__subclasses__():
             if component_class not in self.ignore_list  + [self.__class__]:
-                pass
+                
+                if component_class.__name__ not in self.agent_metrics:
+                    self.agent_metrics[component_class.__name__] = []
                     
+                filename = self.logs_directory + f"/{component_class.__name__}.jsonl"
+                
+                with open(filename, mode="w", encoding="utf-8") as file:
+                    continue
+                    
+                
             
     def step(self) -> None:
+        self.model.resource_management_algorithm(self, self.model.resource_management_algorithm_parameters)
+        
         # Updating satellite networks
-        self.topology_management_algorithm(self.topology_management_parameters)
+        self.topology_management_algorithm(topology=self.topology, **self.topology_management_parameters)
             
         self.scheduler.step()
             
@@ -145,17 +164,14 @@ class Simulator(ComponentManager):
         """
         for component_class in ComponentManager.__subclasses__():
             if component_class not in self.ignore_list  + [self.__class__]:
-                if component_class.__name__ not in self.agent_metrics:
-                    self.agent_metrics[component_class.__name__] = {}
-                    
-                    metrics = []
-                    
-                    for component in component_class.all():
-                        metrics.append(component.collect())
-                        
-                    self.agent_metrics[component_class.__name__][self.schedule.steps] = metrics
+                metrics = {'Step' : self.scheduler.steps,'metrics' : component_class.collect_class_metrics()}
+                
+                if metrics['metrics'] == []:
+                    continue
+                else:
+                    self.agent_metrics[component_class.__name__].append(metrics)
         
-        if self.schedule.steps == self.last_dump + self.dump_interval:
+        if self.scheduler.steps == self.last_dump + self.dump_interval:
             self.dump_data()
             self.last_dump = self.schedule.steps
                         
@@ -165,17 +181,24 @@ class Simulator(ComponentManager):
             os.makedirs(f"{self.logs_directory}")  
         
         for agent_class, value in self.agent_metrics.items():
-            # TODO :  Discuss how to save the files (e.g. json, json+gzip, msgpack)
-            pass
-        
+            filename = self.logs_directory + f"/{agent_class}.jsonl"
+
+            with open(filename, mode="a", encoding="utf-8") as file:
+                for metric in value:
+                    file.write(json.dumps(metric) + "\n") 
+
             if self.clean_data_in_memory:
-                self.agent_metrics[agent_class.__name__] = {}
+                self.agent_metrics[agent_class] = []
             
         
     def run(self) -> dict:
         """ Execute the model
         """
         self.running = True
+        
+        self.initialize_logs()
+        
+        self.monitor()
             
         while self.running:
             self.step()
@@ -185,9 +208,3 @@ class Simulator(ComponentManager):
             self.running = False if self.stopping_criterion(self) else True
             
         self.dump_data()
-        
-
-            
-                            
-                        
-        

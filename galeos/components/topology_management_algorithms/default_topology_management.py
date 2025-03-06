@@ -1,15 +1,8 @@
-from ..ground_station import GroundStation
 from ..satellite import Satellite
 from ..network_link import NetworkLink
-from ..network_flow import NetworkFlow
-from ..process_unit import ProcessUnit
-
-from geopy.distance import geodesic
-import numpy as np
-import networkx as nx
 
 
-def mesh_network(topology, min_num_links : int = 2):
+def mesh_network(topology):
 
     satellites = Satellite.all()
 
@@ -21,26 +14,25 @@ def mesh_network(topology, min_num_links : int = 2):
     
         
         for target in targets:
-            link = NetworkLink(satellite, target)
+            link = NetworkLink()
             
-            topology.add_edge(satellite, target, link=link)
+            link['topology'] = topology
+            link['nodes'] = [satellite, target]
+            link['bandwidth'] = NetworkLink.default_bandwidth
+            link['delay'] = NetworkLink.default_delay
+            link['type'] = 'dynamic'
             
-            topology._adj[satellite][target]
-            topology._adj[target][satellite]
+            topology.add_edge(satellite, target)
+            
+            topology._adj[satellite][target] = link
+            topology._adj[target][satellite] = link
 
 
 
 
 def default_topology_management(topology : object, **parameters):
-    
-    topology.remove_invalid_connections()
-    
-    mesh_network(
-        topology=topology, 
-        min_num_links=parameters.get('min_num_links', 2)
-    )
-    
-    topology.reroute_flows()
+    mesh_network(topology=topology)
+
     
     
     

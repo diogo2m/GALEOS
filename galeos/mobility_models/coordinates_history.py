@@ -1,3 +1,2 @@
 def coordinates_history(sat, step):
-    coordinates = sat["mobility_model_parameters"]["next_coordinates"]
-    sat["coordinates"] = coordinates[step%len(coordinates)]
+    sat.coordinates = sat.coordinates_trace[(sat.model.scheduler.steps + 1) % len(sat.coordinates_trace)]

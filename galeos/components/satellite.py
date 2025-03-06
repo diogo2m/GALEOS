@@ -1,17 +1,19 @@
 # Simulator components
 from ..component_manager import ComponentManager
+from .user import User
 
 class Satellite(ComponentManager):
     _instances = []
     _object_count = 0
-    
+        
     def __init__(
             self, 
             id: int = 0,
             name: str = "",
             coordinates : tuple = None,
             wireless_delay : int = 0,
-            max_connection_range : int = 500
+            max_connection_range : int = 500,
+            is_gateway : bool = False
             
         ) -> object:
         
@@ -24,10 +26,11 @@ class Satellite(ComponentManager):
 
         self.name = name if name else f"Satellite {id}"
 
-        self.links = []
         self.process_unit = None
         self.active = True
         self.wireless_delay = wireless_delay
+        self.is_gateway = is_gateway
+        self.users = []
         self.max_connection_range = max_connection_range
         self.power = 0
         self.min_power = 0
@@ -50,15 +53,37 @@ class Satellite(ComponentManager):
         self.failure_model = None
         self.failure_model_parameters = {}
         
+        
+    def collect_metrics(self) -> dict:
+        metrics = {
+            "ID" : self.id,
+            "Coordinates" : self.coordinates,
+            "Power" : self.power,
+            "Active" : self.active,
+            "Is Gateway" : self.is_gateway
+        }
+        
+        return metrics
     
     
     def step(self) -> None:
-        new_coordinates = self.mobility_model(self, **self.mobility_model_parameters)
+        self.users = []
+        self.mobility_model(self, **self.mobility_model_parameters)
         
-        self.coordinates = new_coordinates
+        if self.process_unit:
+            self.process_unit.coordinates =self.coordinates
+            
+        if self.coordinates is None:
+            self.active = False
+            
+            if self.process_unit:
+                self.process_unit.available
+                
+            return 
         
-        # Verificar se houve uma nova falha
         failure_occurred = False
+        
+        # Check if there was a failure
         if self.failure_model:
             failure_occurred = self.failure_model(self, **self.failure_model_parameters)
             if failure_occurred:
@@ -66,18 +91,18 @@ class Satellite(ComponentManager):
             else: 
                 self.active = True
         
-        # Gerar energia
-        energy_generated = 0
+        power_generated = 0
         if self.power_generation_model:
-            energy_generated = self.power_generation_model(self, **self.power_generation_model_parameters)
-        self.power += energy_generated
+            power_generated = self.power_generation_model(self, **self.power_generation_model_parameters)
+        self.power += power_generated
         
-        # Consumir energia
-        energy_consumed = 0
+        power_consumed = 0
         if self.power_consumption_model:
-            energy_consumed = self.power_consumption_model(self, **self.power_consumption_model_parameters)
-        self.power -= energy_consumed
+            power_consumed = self.power_consumption_model(self, **self.power_consumption_model_parameters)
+        self.power -= power_consumed
         
+        
+        # Check the current power level
         if self.power < self.min_power:
             self.active = False
             
@@ -86,7 +111,11 @@ class Satellite(ComponentManager):
             
         elif not failure_occurred and not self.active:
             self.active = True
-            
+        
+        if self.active:
+            for user in User.all():
+                if self.model.topology.within_range(self, user):
+                    user.connect_to_access_point(self)
             
     def export(self):
         """ Method that generates a representation of the object in dictionary format to save current context
@@ -98,6 +127,7 @@ class Satellite(ComponentManager):
             "power" : self.power,
             "min_power" : self.min_power,
             "wireless_delay" : self.wireless_delay,
+            "is_gateway" : self.is_gateway,
             "max_connection_range" : self.max_connection_range,
             "mobility_model_parameters" : self.mobility_model_parameters,
             "power_consumption_model_parameters" : self.power_consumption_model_parameters,
@@ -112,13 +142,6 @@ class Satellite(ComponentManager):
                     "id" : self.process_unit.id,
                     "class" : type(self.process_unit).__name__
                 } if self.process_unit else None,
-                "links" : [
-                    {
-                        "id" : link["id"],
-                        "class" : type(link).__name__
-                    } for link in self.links
-                ],
-                
             }
         }
         

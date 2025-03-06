@@ -1,4 +1,5 @@
 from geopy.distance import geodesic
+import math
 
 def linear_estimation(sat, step):
     last_lat, last_lon = sat["mobility_model_parameters"]["last_coordinate"]

@@ -3,8 +3,10 @@ from .network_flow import NetworkFlow
 from .network_link import NetworkLink
 from .process_unit import ProcessUnit
 from .satellite import Satellite
+from .user import User
 
 from geopy.distance import geodesic
+import math
 import networkx as nx
 
 
@@ -33,41 +35,75 @@ class Topology(ComponentManager, nx.Graph):
         """ Method that executes the object's events
         """
         self.remove_invalid_connections()
+        self.reroute_flows()
         
         
     def reroute_flows(self):
         """ Method that performs the routing of flows whose paths are now invalid
         """
         for flow in NetworkFlow.all():
+            if flow.status == 'finished':
+                continue
+            
             path = flow.path
+            
 
             need_to_reroute = False
-
-            for i in range(len(path)-1):
-                link = self[path[i]][path[i+1]]
-
-                if link not in NetworkLink.all():
-                    need_to_reroute = True
-                    break
+            
+            if path == []:
+                need_to_reroute = True
+                
+            elif flow.metadata.get('type', 'default') == 'request_response' and path[-1] not in flow.source.network_access_points:
+                need_to_reroute = True
+            
+            else:
+                for i in range(len(path)-1):
+                    if not self.has_edge(path[i], path[i+1]):
+                        need_to_reroute = True
+                        break
+        
                 
             if need_to_reroute:
+                if flow.metadata.get('type', 'default') == 'request_response':
+                    user = flow.source
+                    connection_paths = []
+                    
+                    # Checks all the user's access points and determines if access to the application is possible.
+                    for access_point in user.network_access_points:
+                        if nx.has_path(G=self, source=access_point, target=flow.target):
+                            path = nx.shortest_path(
+                                G=self.model.topology,
+                                source=access_point, 
+                                target=flow.target,
+                                weight='delay'
+                                )
+                                
+                            connection_paths.append(path)
+                    
+                    path = min(connection_paths, key=lambda path: len(path), default=[])
+                
 
-                if nx.has_path(G=self, source=path[0], target=path[-1]):
+                elif nx.has_path(G=self, source=flow.source, target=flow.target):
                     path  = nx.shortest_path(
                         G=self,
-                        source=path[0],
-                        target=path[-1],
+                        source=flow.source,
+                        target=flow.target,
                         weight='delay'
                     )
 
                 else:
                     path = []
+                    
+                if path == []:
+                    flow.status = 'waiting'
+                else:
+                    flow.status = 'active'
 
                 flow.last_path = flow.path 
-
+                
                 flow.path = path 
 
-                for i in range(len(flow.last_path-1)):
+                for i in range(len(flow.last_path)-1):
                     link = self[flow.last_path[i]].get(flow.last_path[i+1])
 
                     if link is None:
@@ -76,37 +112,54 @@ class Topology(ComponentManager, nx.Graph):
 
                 flow.bandwidth = {}
 
-                for i in range(len(path)):
+                for i in range(len(path)-1):
                     link = self[flow.path[i]][flow.path[i+1]]
 
                     link['flows'].append(flow)
-                    flow.bandwidth[link] = 0
+                    flow.bandwidth[link.id] = 0
                     
                     
     def remove_invalid_connections(self):
-        """ method that reevaluates the existence of links, removing them if they are at a 
+        """ Method that reevaluates the existence of links, removing them if they are at a 
         greater distance than supported
         """
         for satellite in Satellite.all():
-            for neighbor in self[satellite].neighbors:
+            link_to_removed = []
+            for neighbor in self[satellite]:
                 link = self[satellite][neighbor]
 
-                if not isinstance(neighbor, ProcessUnit) and Topology.within_range(satellite, neighbor):
-                    NetworkLink.remove(link)
-
-                    self.remove_edge(satellite, neighbor)
-
-                    del self._adj[satellite][neighbor]
-                    del self._adj[neighbor][satellite]
+                if (not isinstance(neighbor, ProcessUnit) and not Topology.within_range(satellite, neighbor)) or not satellite.active:
+                    if link in NetworkLink.all():
+                        NetworkLink.remove(link)
                     
+                    link_to_removed.append((satellite, neighbor))
+                
+            for nodes in link_to_removed:
+                self.remove_edge(nodes[0], nodes[1])
+
+
+    def get_flow_delay(self, flow) -> int:
+        if flow.status == 'waiting':
+            path_delay = float('inf')
+        else:
+            path_delay = nx.classes.function.path_weight(G=self, path=flow.path, weight="delay")    
+        
+            if isinstance(flow.source, User):
+                path_delay += flow.path[-1].wireless_delay
+        return path_delay
+    
     
     @staticmethod               
-    def within_range(object_1 : object, object_2 : object):
+    def within_range(object_1 : object, object_2 : object, yes = False):
         """ Method that evaluates whether the distance between two components is within the communication range.
             TODO : Need to develop verification to differentiate the range of different types of links
         """
         distance_nodes = [object_1.max_connection_range, object_2.max_connection_range]
+        ground_distance = geodesic(object_1.coordinates[:2], object_2.coordinates[:2]).kilometers 
+        air_distance = (object_1.coordinates[2] - object_2.coordinates[2])/1000
         
-        return min(distance_nodes) > geodesic(object_1.coordinates, object_2.coordinates).kilometers
+        if yes:
+            print(math.sqrt(ground_distance**2 + air_distance**2))
+        return min(distance_nodes) > math.sqrt(ground_distance**2 + air_distance**2)
         
         

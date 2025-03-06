@@ -1,5 +1,7 @@
 from ..component_manager import ComponentManager
+from .network_link import NetworkLink
 from .satellite import Satellite
+from .user import User
 
 from geopy.distance import distance
 
@@ -27,7 +29,6 @@ class GroundStation(ComponentManager):
         self.wireless_delay = wireless_delay
         self.max_connection_range = max_connection_range
         
-        self.links = []
         self.users = []
         
         
@@ -40,11 +41,11 @@ class GroundStation(ComponentManager):
             "wireless_delay" : self.wireless_delay,
             "max_connection_range" : self.max_connection_range,
             "relationships" : {
-                "links" : [
+                "users" : [
                     {
-                        "id" : link['id'],
-                        "class" : type(link).__name__
-                    } for link in self.links
+                        "id" : user.id,
+                        "class" : type(user).__name__
+                    } for user in self.users
                 ]
             }
         }
@@ -55,6 +56,34 @@ class GroundStation(ComponentManager):
     def step(self):
         """ Method that executes the object's events
         """
-        pass
+        topology = self.model.topology
         
-    
+        self.connection_to_satellites()
+          
+        self.users = []          
+        for user in User.all():
+            if topology.within_range(self, user):
+                user.connect_to_access_point(self)
+                
+
+    def connection_to_satellites(self):
+        topology = self.model.topology
+        
+        for satellite in Satellite.all():
+            
+            if topology.within_range(self, satellite) and satellite.is_gateway:
+                if self.model.topology.has_edge(self, satellite):
+                    continue
+                
+                link = NetworkLink()
+                
+                link['topology'] = topology
+                link['nodes'] = [satellite, self]
+                link['bandwidth'] = NetworkLink.default_bandwidth
+                link['delay'] = NetworkLink.default_delay
+                link['type'] = 'dynamic'
+                
+                topology.add_edge(satellite, self)
+        
+                topology._adj[satellite][self] = link
+                topology._adj[self][satellite] = link

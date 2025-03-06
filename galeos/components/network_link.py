@@ -9,6 +9,10 @@ class NetworkLink(ComponentManager, dict):
     _instances = []
     _object_count = 0
     
+    
+    default_bandwidth = 10 # MB/s 
+    default_delay = 1
+    
     def __init__(
             self,
             id : int = 0
@@ -34,6 +38,19 @@ class NetworkLink(ComponentManager, dict):
         self["active"] = True
         self['type'] = 'default'
         
+    
+    def collect_metrics(self) -> dict:
+        metrics = {
+            "ID" : self['id'],
+            "Nodes" : [str(node) for node in self['nodes']],
+            "Delay" : self['delay'],
+            "Active" : self['active'],
+            "Bandwidth" : self['bandwidth'],
+            "Type" : self['type']
+        }
+        
+        return metrics  
+    
         
     def export(self) -> dict: 
         """ Method that generates a representation of the object in dictionary format to save current context
@@ -45,11 +62,13 @@ class NetworkLink(ComponentManager, dict):
             'bandwidth' : self['bandwidth'],
             'type' : self['type'],
             'relationships' : {
-                "flows" : [ {"class" : type(flow).__class__, "id" : flow.id} for flow in self['flows']]
+                "topology": {"class": type(self.topology).__name__, "id": self.topology.id},
+                "flows" : [ {"class" : type(flow).__class__, "id" : flow.id} for flow in self['flows']],
+                "nodes": [{"class": type(node).__name__, "id": node.id} for node in self.nodes]
             }
         }
         
-        return component
+        return component 
         
         
     def __getattr__(self, attribute_name: str):  

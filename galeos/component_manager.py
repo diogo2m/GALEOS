@@ -33,8 +33,14 @@ class ComponentManager:
     def collect_class_metrics(cls):
         """ Method that collects class metrics
         """
-        metrics = [ obj.collect_metrics() for obj in cls.all()]
+        metrics = []
         
+        for obj in cls.all():
+            obj_metrics = obj.collect_metrics()
+            
+            if obj_metrics:
+                metrics.append(obj_metrics)
+                
         return metrics
     
     
@@ -61,6 +67,10 @@ class ComponentManager:
         """
         return cls._instances.copy()
     
+    
+    @classmethod
+    def count(cls) -> int:
+        return len(cls._instances)
     
     @classmethod
     def clear(cls) -> None:
@@ -90,7 +100,7 @@ class ComponentManager:
         ignore_list += [Simulator, Topology]
         
         for component_class in cls.__subclasses__():
-            if component_class not in ignore_list:
+            if component_class.__name__ not in ignore_list + ['Simulator', 'Topology', 'Network']:
                 components = []
                 
                 for component in component_class.all():

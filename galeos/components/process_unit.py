@@ -13,7 +13,7 @@ class ProcessUnit(ComponentManager):
             storage : int = 0,
             coordinates : tuple = None,
             model_name : str = "",
-            architecture : dict = None
+            architecture : dict = {}
         ):
         
         self.__class__._instances.append(self)
@@ -48,12 +48,28 @@ class ProcessUnit(ComponentManager):
         
         
         self.applications = []
-        
-        self.links = []
-        
+                
         # Process Unit availability status
         self.available = True
 
+
+    def collect_metrics(self) -> dict:
+        metrics = {
+            "ID" : self.id,
+            "Coordinates" : self.coordinates,
+            "CPU" : self.cpu,
+            "Memory" : self.memory,
+            "Storage" : self.storage,
+            "CPU Demand" : self.cpu_demand,
+            "Memory Demand" : self.memory_demand,
+            "Storage Demand" : self.storage_demand,
+            "Power" : self.power,
+            "Available" : self.available,
+            "Architecture" : self.architecture
+        }
+        
+        return metrics
+    
     
     def step(self):
         pass
@@ -78,12 +94,6 @@ class ProcessUnit(ComponentManager):
                 "power_generation_model" : self.power_generation_model.__name__ if self.power_generation_model else None,
                 "power_consumption_model" : self.power_consumption_model.__name__ if self.power_consumption_model else None,
                 "failure_model" : self.failure_model.__name__ if self.failure_model else None,
-                "links" : [
-                    { 
-                        "id" : link.id, 
-                        "class" : type(link).__name__
-                    } for link in self.links
-                ],
                 "applications" : [
                     {
                         "class" : type(app).__name__,
@@ -96,5 +106,11 @@ class ProcessUnit(ComponentManager):
         
         return component
     
-    def provision(self, applications : object) -> None:
-        pass
+    def has_capacity_to_host(self, application : object) -> None:
+        cpu_demand = self.cpu_demand + application.cpu_demand
+        memory_demand = self.memory_demand + application.memory_demand
+        storage_demand = self.storage_demand + application.storage_demand
+        
+        return self.cpu >= cpu_demand and self.memory >= memory_demand and self.storage >= storage_demand
+    
+    
