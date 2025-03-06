@@ -58,6 +58,7 @@ class Application(ComponentManager):
         last_migration = self.migrations[-1].copy() if self.migrations else None
         
         if last_migration:
+            last_migration['origin'] = str(last_migration['target'])
             last_migration['target'] = str(last_migration['target'])
             
         metrics = {
