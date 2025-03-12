@@ -1,4 +1,4 @@
-from ..ground_station import GroundStation
+from ..components.ground_station import GroundStation
 
 from geopy.distance import geodesic, great_circle
 from geopy.point import Point
