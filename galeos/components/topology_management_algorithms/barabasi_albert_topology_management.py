@@ -8,7 +8,7 @@ import networkx as nx
 
 def barabasi_albert_network(topology, min_num_links : int = 2):
 
-    satellites = Satellite.all()
+    satellites = [ sat for sat in Satellite.all() if sat.coordinates]
 
     alpha = 0.05  
 
@@ -46,12 +46,10 @@ def barabasi_albert_network(topology, min_num_links : int = 2):
             
 def barabasi_albert_topology_management(topology : object, **parameters):
     
-    topology.remove_invalid_connections()
-    
     barabasi_albert_network(
         topology=topology, 
         min_num_links=parameters.get('min_num_links', 2)
     )
     
-    topology.reroute_flows()
+    
 

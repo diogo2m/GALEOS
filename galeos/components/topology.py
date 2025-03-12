@@ -117,7 +117,7 @@ class Topology(ComponentManager, nx.Graph):
 
                     link['flows'].append(flow)
                     flow.bandwidth[link.id] = 0
-                    
+                 
                     
     def remove_invalid_connections(self):
         """ Method that reevaluates the existence of links, removing them if they are at a 

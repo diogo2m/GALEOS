@@ -3,8 +3,7 @@ from ..network_link import NetworkLink
 
 
 def mesh_network(topology):
-
-    satellites = Satellite.all()
+    satellites = [ sat for sat in Satellite.all() if sat.coordinates is not None]
 
     for satellite in satellites:
         targets = [
@@ -33,8 +32,4 @@ def mesh_network(topology):
 def default_topology_management(topology : object, **parameters):
     mesh_network(topology=topology)
 
-    
-    
-    
-    
                 

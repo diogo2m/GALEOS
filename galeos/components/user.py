@@ -43,69 +43,48 @@ class User(ComponentManager):
         
         
     def step(self):
-        # Updates the information for each application access model
-        for access_model in self.applications_access_models:   
+        for access_model in self.applications_access_models:
             app = access_model.application    
             current_access = access_model.history[-1] 
-            
+
             # If the application requests provisioning, update the metrics.   
             if access_model.request_provisioning:
                 if app.available:
                     current_access['provisioned_time'] += 1
-                    
-                    if current_access['making_request'].get(str(self.model.scheduler.steps)):
-                        
+
+                    if current_access['making_request'].get(str(access_model.model.scheduler.steps)):
+
                         if access_model.flow.status == 'active':
                             current_access['access_time'] += 1
-                        
+
                         else:
                             current_access['connection_failure_time'] += 1
                 else:
                     current_access['waiting_provisioning'] += 1
-                    
-       
+
+
             elif access_model.flow is not None:
                 access_model.flow.status = 'finished'
+                access_model.flow.end = access_model.model.scheduler.steps
 
                 access_model.flow = None
-                
+
             # Sets the flag value according to the model
-            if current_access['start'] == self.model.scheduler.steps + 1:
+            if current_access['start'] == access_model.model.scheduler.steps + 1:
                 access_model.request_provisioning = True
-                
-                    
-            elif current_access['end'] == self.model.scheduler.steps + 1:
+
+
+            elif current_access['end'] == access_model.model.scheduler.steps + 1:
                 access_model.request_provisioning = False
-                
+
                 if access_model.flow is not None:
                     access_model.flow.status = "finished"
-                    
+
                 access_model.flow = None
 
                 # Gets the next access according to the model since the current one has ended.
                 access_model.get_next_access(current_access['next_access'])
                 
-            if current_access['making_request'].get(str(self.model.scheduler.steps + 1)):
-                if access_model.flow is not None:
-                    # print(access_model.flow.path[0] if access_model.flow.path else None)
-                    if access_model.flow.target != app.process_unit or app.process_unit.available:
-                        if not access_model.flow is None:
-                            access_model.flow.status = 'finished'
-                            access_model.flow = None
-                        
-                if access_model.flow is None:
-                    flow = NetworkFlow(
-                        status="waiting",
-                        start=self.model.scheduler.steps + 1,
-                        source=self,
-                        target=app.process_unit,
-                        data_to_transfer=current_access.get('data_to_transfer', 1),
-                        metadata={'type' : 'request_response', 'user' : self}
-                    )
-                    
-                    access_model.flow = flow
-                   
-        
         if len(self.coordinates_trace) <= self.model.scheduler.steps:
             self.mobility_model(self)
             

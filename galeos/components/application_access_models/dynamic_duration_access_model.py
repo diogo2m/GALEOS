@@ -1,8 +1,9 @@
 from ...component_manager import ComponentManager
+from ..network_flow import NetworkFlow
 
 from itertools import cycle
 
-class CyclicApplicationAccessModel(ComponentManager):
+class DynamicDurationAccessModel(ComponentManager):
     
     _instances = []
     _object_count = 0
@@ -93,11 +94,73 @@ class CyclicApplicationAccessModel(ComponentManager):
         
         self.history.append({
             'start': start,
-            'end': start + duration,
             'provisioned_time': 0,
+            'required_provisioning_time' : duration,
             'waiting_provisioning': 0,
             'access_time': 0,
             'connection_failure_time': 0,
             'making_request': making_request_times,
             'next_access' : start + duration + interval,
         })
+        
+    
+    def update_access(self) -> None:
+        app = self.application    
+        current_access = self.history[-1] 
+            
+        # If the application requests provisioning, update the metrics.   
+        if self.request_provisioning:
+            if app.available:
+                current_access['provisioned_time'] += 1
+                    
+                if current_access['making_request'].get(str(self.model.scheduler.steps)):
+                        
+                    if self.flow.status == 'active':
+                            current_access['access_time'] += 1
+                        
+                    else:
+                        current_access['connection_failure_time'] += 1
+            else:
+                current_access['waiting_provisioning'] += 1
+                    
+       
+        elif self.flow is not None:
+            self.flow.status = 'finished'
+            self.flow.end = self.model.scheduler.steps
+
+            self.flow = None
+                
+        # Sets the flag value according to the model
+        if current_access['start'] == self.model.scheduler.steps + 1:
+            self.request_provisioning = True
+                
+                    
+        elif current_access['end'] == self.model.scheduler.steps + 1:
+            self.request_provisioning = False
+                
+            if self.flow is not None:
+                self.flow.sapplicationtatus = "finished"
+                    
+            self.flow = None
+
+            # Gets the next access according to the model since the current one has ended.
+            self.get_next_access(current_access['next_access'])
+                
+        if current_access['making_request'].get(str(self.model.scheduler.steps + 1)):
+            if self.flow is not None:
+                if self.flow.target != app.process_unit or app.process_unit.available:
+                    if not self.flow is None:
+                        self.flow.status = 'finished'
+                        self.flow = None
+                        
+            if self.flow is None:
+                flow = NetworkFlow(
+                    status="waiting",
+                    start=self.model.scheduler.steps + 1,
+                    source=self,
+                    target=app.process_unit,
+                    data_to_transfer=current_access.get('data_to_transfer', 1),
+                    metadata={'type' : 'request_response', 'user' : self}
+                )
+                    
+                self.flow = flow

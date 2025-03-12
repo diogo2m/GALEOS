@@ -5,14 +5,18 @@ from .components import*
 from typing import Callable
 import json
 import os
+import datetime
 
-TIME_UNITS = [
-    # add supported time units
-]
 
 class Simulator(ComponentManager):
     _instances = []
     _object_count = 0
+    
+    time_units = [
+        "seconds",
+        "minutes",
+        "hours"
+    ]
     
     def __init__(
         self,
@@ -26,8 +30,11 @@ class Simulator(ComponentManager):
         scheduler : Callable = DefaultScheduler, 
         dump_interval : int = 100,
         logs_directory : str = "logs",
-        ignore_list : list = [], # Lista de componentes que n deve coletar metricas
-        clean_data_in_memory : bool = False
+        ignore_list : list = [], 
+        clean_data_in_memory : bool = False,
+        tick_duration : int = 1,
+        time_unit : str = 'seconds'
+        
         ) -> object:
         """ Method that creates the simulator  
         
@@ -50,14 +57,14 @@ class Simulator(ComponentManager):
         self.topology_management_parameters = topology_management_algorithm_parameters
         
         self.scheduler = scheduler(self)
-        self.topology = None
+        self.topology = Topology()
         
         self.logs_directory = logs_directory
         self.dump_interval = dump_interval
         self.last_dump = 0
         self.clean_data_in_memory = clean_data_in_memory
         
-        # TODO: Customize the time unit
+        self.tick_duration = datetime.timedelta(**{time_unit : tick_duration}).total_seconds()
         
         self.agent_metrics = {}
         self.ignore_list = ignore_list
@@ -122,8 +129,6 @@ class Simulator(ComponentManager):
                 elif value is None: 
                     setattr(obj, key, None)
 
-        
-        self.topology = Topology()
         
         for agent in GroundStation.all() + Satellite.all() + ProcessUnit.all():
             self.topology.add_node(agent)

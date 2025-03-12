@@ -19,6 +19,10 @@ class DefaultScheduler:
         for application in Application.all():
             application.step()
             
+        for user in User.all():
+            for access_model in user.applications_access_models:
+                access_model.update_access()
+            
         for flow in NetworkFlow.all():
             flow.step()
         

@@ -3,7 +3,6 @@ from .network_link import NetworkLink
 from .satellite import Satellite
 from .user import User
 
-from geopy.distance import distance
 
 class GroundStation(ComponentManager):
     _instances = []

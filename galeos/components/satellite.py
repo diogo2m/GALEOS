@@ -71,7 +71,7 @@ class Satellite(ComponentManager):
         self.mobility_model(self, **self.mobility_model_parameters)
         
         if self.process_unit:
-            self.process_unit.coordinates =self.coordinates
+            self.process_unit.coordinates = self.coordinates
             
         if self.coordinates is None:
             self.active = False
@@ -85,21 +85,17 @@ class Satellite(ComponentManager):
         
         # Check if there was a failure
         if self.failure_model:
-            failure_occurred = self.failure_model(self, **self.failure_model_parameters)
+            failure_occurred = self.failure_model(self)
             if failure_occurred:
                 self.active = False
             else: 
                 self.active = True
         
-        power_generated = 0
         if self.power_generation_model:
-            power_generated = self.power_generation_model(self, **self.power_generation_model_parameters)
-        self.power += power_generated
+            self.power_generation_model(self)
         
-        power_consumed = 0
         if self.power_consumption_model:
-            power_consumed = self.power_consumption_model(self, **self.power_consumption_model_parameters)
-        self.power -= power_consumed
+            self.power_consumption_model(self,)
         
         
         # Check the current power level
