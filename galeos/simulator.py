@@ -160,7 +160,7 @@ class Simulator(ComponentManager):
         
         # Updating satellite networks
         self.topology_management_algorithm(topology=self.topology, **self.topology_management_parameters)
-            
+        
         self.scheduler.step()
             
         
@@ -207,7 +207,6 @@ class Simulator(ComponentManager):
             
         while self.running:
             self.step()
-
             self.monitor()
             
             self.running = False if self.stopping_criterion(self) else True

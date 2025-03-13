@@ -34,7 +34,7 @@ class DefaultScheduler:
         
         for ground_station in GroundStation.all():
             ground_station.step()
-            
+        
         for topology in Topology.all():
             topology.step()
         

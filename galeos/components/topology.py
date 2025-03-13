@@ -29,7 +29,6 @@ class Topology(ComponentManager, nx.Graph):
         else:
             nx.Graph.__init__(self, incoming_graph_data=existing_graph)
             
-        self.satellites = []
             
     def step(self):
         """ Method that executes the object's events

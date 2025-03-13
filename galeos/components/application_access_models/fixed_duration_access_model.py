@@ -87,7 +87,7 @@ class FixedDurationAccessModel(ComponentManager):
         while request_time < start + duration:
             time = connection_duration if request_time + connection_duration < start + duration else duration - request_time
             for i in range( time):
-                making_request_times[i + request_time] = True
+                making_request_times[str(i + request_time)] = True
                                 
             request_time += time + connection_interval
             
@@ -137,11 +137,11 @@ class FixedDurationAccessModel(ComponentManager):
                 
                 flow = NetworkFlow(
                     start=self.model.scheduler.steps + 1,
-                    source=self,
+                    source=self.user,
                     target=app.process_unit,
                     path=path,
                     data_to_transfer=current_access.get('data_to_transfer', 1),
-                    metadata={'type' : 'request_response', 'user' : self}
+                    metadata={'type' : 'request_response', 'user' : self.user}
                 )
                     
                 self.flow = flow

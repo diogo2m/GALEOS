@@ -79,6 +79,7 @@ class Application(ComponentManager):
     def step(self):
         if self.process_unit and not self.process_unit.available:
             self.available = False
+            
         elif self.process_unit and not self.available:
             self.available = True
             
@@ -125,8 +126,6 @@ class Application(ComponentManager):
                     self.being_provisioned = False
                     self.available = True
                     
-                    
-    
 
     def export(self):
         """ Method that generates a representation of the object in dictionary format to save current context
@@ -168,7 +167,7 @@ class Application(ComponentManager):
             "download_time" : 0,
             "application_state_migration_time" : 0
         })
-    0
+    
     
     
     
