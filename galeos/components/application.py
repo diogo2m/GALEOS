@@ -77,13 +77,7 @@ class Application(ComponentManager):
         return metrics
     
     
-    def step(self):
-        if self.process_unit and not self.process_unit.available:
-            self.available = False
-            
-        elif self.process_unit and not self.available:
-            self.available = True
-            
+    def step(self):    
         if len(self.migrations) and self.migrations[-1]['end'] == None:
             migr = self.migrations[-1]
             # TODO: Implement a dependency system and manage the time in each state
@@ -127,6 +121,12 @@ class Application(ComponentManager):
                     self.being_provisioned = False
                     self.available = True
                     
+        if self.process_unit and not self.process_unit.available:
+            self.available = False
+            
+        elif self.process_unit and not self.available:
+            self.available = True
+                    
 
     def export(self):
         """ Method that generates a representation of the object in dictionary format to save current context
@@ -153,7 +153,7 @@ class Application(ComponentManager):
         # Enables the flag that the service is being provisioned
         self.being_provisioned = True
         
-        
+
         process_unit.cpu_demand += self.cpu_demand
         process_unit.memory_demand += self.memory_demand
         process_unit.storage_demand += self.storage_demand

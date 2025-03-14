@@ -72,7 +72,12 @@ class ProcessUnit(ComponentManager):
     
     
     def step(self):
-        pass
+        for app in self.applications:
+            if app.process_unit and not app.process_unit.available:
+                app.available = False
+
+            elif app.process_unit and not app.available:
+                app.available = True
       
        
     def export(self) -> dict:

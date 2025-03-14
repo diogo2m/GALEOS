@@ -13,9 +13,6 @@ class DefaultScheduler:
     def step(self):
         """ Method that performs the scheduling of components in standard order
         """
-        for process_unit in ProcessUnit.all():
-            process_unit.step()
-        
         for application in Application.all():
             application.step()
             
@@ -37,5 +34,8 @@ class DefaultScheduler:
         
         for topology in Topology.all():
             topology.step()
+            
+        for process_unit in ProcessUnit.all():
+            process_unit.step()
         
         self.steps += 1
