@@ -2,6 +2,7 @@ from galeos.components import GroundStation, NetworkLink, Topology
 
 import networkx as nx
 
+    
 def load_ground_topology_from_gml(
         filepath: str, 
         default_delay : int  = 1
@@ -20,9 +21,10 @@ def load_ground_topology_from_gml(
             nodes_to_remove.append(node)
             continue
         
-        station = GroundStation(coordinates=(G.nodes[node]["Latitude"], G.nodes[node]["Longitude"])) 
-
-        new_label = str(station)  
+        station = GroundStation(coordinates=(G.nodes[node]["Latitude"], G.nodes[node]["Longitude"], 0)) 
+ 
+        
+        new_label = station
         
         new_labels[node] = new_label
         ground_stations[new_label] = station
@@ -41,11 +43,11 @@ def load_ground_topology_from_gml(
             continue
         
         
-        link_speed = data.get('LinkSpeed',0)
-        link_speed_unit = data.get('LinkSpeedUnits')
+        link_speed = int(data.get('LinkSpeed',0))
+        link_speed_unit = data.get('LinkLabel', 'M')
         
         bandwidth = link_speed if link_speed_unit == "M" else link_speed *1000
-        
+
         link = NetworkLink()
         
         link['topology'] = topology
@@ -54,12 +56,10 @@ def load_ground_topology_from_gml(
         link['delay'] = default_delay
         link['type'] = 'static'
         
-        topology.add_edge([node_1, node_2], link=link)
+        topology.add_edge(node_1, node_2, link=link)
         
         topology._adj[node_1][node_2] = link
         topology._adj[node_2][node_1] = link
         
-        ground_stations[node_1].links.append(link)
-        ground_stations[node_2].links.append(link)
-      
+        
     return topology

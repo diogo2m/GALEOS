@@ -1,8 +1,8 @@
-from galeos.components import User,Application, CyclicApplicationAccessModel,Topology, NetworkLink, Satellite, mesh_network
+from galeos.components import User,Application, FixedDurationAccessModel,Topology, NetworkLink, Satellite, mesh_network
 
 from random import choices
 import requests
-from datetime import datetime
+from json import load, dump
 from time import sleep
 
 
@@ -21,6 +21,8 @@ def create_user(
         
     user.mobility_model = None
     user.mobility_model_parameters = {}
+    
+    return user
         
   
 def create_application_to_user(
@@ -40,9 +42,9 @@ def create_application_to_user(
         sla=sla,
     )
     
-    values = [ j for j in range(20)]
+    values = [ j for j in range(3, 20)]
     
-    access_model = CyclicApplicationAccessModel(
+    access_model = FixedDurationAccessModel(
         user=user,
         application=app,
         start=1,
@@ -59,7 +61,7 @@ def create_link(
         v1 : object, 
         v2 : object,
         delay : int = 1,
-        bandwidth : int = 12,
+        bandwidth : int = NetworkLink.default_bandwidth,
         topology : object = None
     ):
     
@@ -90,18 +92,13 @@ def get_satellites_from_api( coordinates, sat_range, api_category: int = 52) -> 
     return response.json()["above"]
 
 
-def load_satellites(
+def load_satellites_from_api(
         max_steps : int = 10,
         interval : int = 30,
         sat_range : int = 1000,
         api_category: int = 52, 
-        max_satellites: int = None
+        max_satellites: int = 100
     ) -> None:
-    """ Function that captures information about satellites around a reference point over a period of time 
-    and creates satellites with this information. 
-    No computational units are assigned to any of these satellites.
-
-    """
     sats = {}
     
     for i in range(max_steps):
@@ -120,7 +117,8 @@ def load_satellites(
                 satellite = Satellite(
                     name=f"SATELLITE-{id}",
                     coordinates=coordinates,
-                    max_connection_range=300
+                    max_connection_range=500, 
+                    is_gateway=True
                 )
                 
                 # satellite.mobility_model = coordinates_history
@@ -128,18 +126,82 @@ def load_satellites(
                 
                 sats[id] = satellite
                 
-        sleep(interval)
+        for satellite in Satellite.all():
+            if len(satellite.coordinates_trace) < i:
+                satellite.coordinates_trace.append(None)
                 
+                   
+        sleep(interval)
+        
+    for sat in Satellite.all():
+        sat.coordinates = sat.coordinates_trace[0] 
 
+
+def load_satellites_from_file(
+        filename : str = "satellites.json",
+        max_steps : int = 10,
+        max_satellites: int = 100
+    ) -> None:
+    sats = {}
+    
+    with open(filename, 'r', encoding='UTF-8') as file:
+        data = load(file)
+        
+    for i, current_step in enumerate(data[: max_steps if max_steps - 1 < len(data) else None]):
+        for sat in current_step:
+            id = sat['satid']
+            coordinates = (sat['satlat'], sat['satlng'], sat['satalt'])
+            
+            if id in sats:
+                satellite = sats[id]
+                
+                satellite.coordinates_trace.append(coordinates)
+                
+            elif Satellite.count() < max_satellites:
+                satellite = Satellite(
+                    name=f"SATELLITE-{id}",
+                    coordinates=coordinates,
+                    max_connection_range=500,
+                    is_gateway=True
+                )
+                
+                # satellite.mobility_model = coordinates_history
+                satellite.coordinates_trace.extend([None for _ in range(i)] + [coordinates])
+                
+                sats[id] = satellite
+                
+        for satellite in Satellite.all():
+            if len(satellite.coordinates_trace) < i:
+                satellite.coordinates_trace.append(None)
+                
+    for sat in Satellite.all():
+        sat.coordinates = sat.coordinates_trace[0]         
+    
+    
 def create_satellite_topology(
         topology : Topology,
         max_steps : int = 10,
         interval : int = 30,
         sat_range : int = 1000,
-        max_satellites: int = None
+        max_satellites: int = 100, 
+        filename : str = ""
     ):
     
-    load_satellites(max_steps,interval, sat_range, max_satellites)
+    if filename:
+        load_satellites_from_file(
+            filename=filename,
+            max_steps=max_steps,
+            max_satellites=max_satellites
+        )
+    else:
+        load_satellites_from_api(
+            max_steps=max_steps, 
+            interval=interval, 
+            sat_range=sat_range, 
+            max_satellites=max_satellites
+        )
+
+    topology.add_nodes_from(Satellite.all())
     
     mesh_network(topology)
     
