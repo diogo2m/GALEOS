@@ -39,7 +39,7 @@ def barabasi_albert_network(topology, min_num_links : int = 2):
         for target in selected_targets:
             link = NetworkLink(satellite, target)
             
-            topology.add_edge(satellite, target, link=link)
+            topology.add_edge(satellite, target)
             
             topology._adj[satellite][target]
             topology._adj[target][satellite]

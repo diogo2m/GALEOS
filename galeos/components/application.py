@@ -68,6 +68,7 @@ class Application(ComponentManager):
             "Storage Demand" : self.storage_demand,
             "State" : self.state,
             "SLA" : self.sla,
+            "Process Unit" : str(self.process_unit) if self.process_unit else None,
             "Available" : self.available,
             "Being Provisioned" : self.being_provisioned,
             "Last Migration" : last_migration

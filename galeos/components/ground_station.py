@@ -69,6 +69,8 @@ class GroundStation(ComponentManager):
         topology = self.model.topology
         
         for satellite in Satellite.all():
+            if satellite.coordinates is None:
+                continue
             
             if topology.within_range(self, satellite) and satellite.is_gateway:
                 if self.model.topology.has_edge(self, satellite):

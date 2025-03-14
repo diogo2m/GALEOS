@@ -10,7 +10,7 @@ class NetworkLink(ComponentManager, dict):
     _object_count = 0
     
     
-    default_bandwidth = 10 # MB/s 
+    default_bandwidth = 100_000 # MB/s 
     default_delay = 1
     
     def __init__(
@@ -54,7 +54,7 @@ class NetworkLink(ComponentManager, dict):
         
     def export(self) -> dict: 
         """ Method that generates a representation of the object in dictionary format to save current context
-        """   
+        """ 
         component = {
             "id" : self['id'],
             "delay" : self['delay'],

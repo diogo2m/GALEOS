@@ -68,7 +68,12 @@ class Satellite(ComponentManager):
     
     def step(self) -> None:
         self.users = []
-        self.mobility_model(self, **self.mobility_model_parameters)
+        
+        if len(self.coordinates_trace) <= self.model.scheduler.steps:
+            self.mobility_model(self)
+            
+        if self.coordinates != self.coordinates_trace[self.model.scheduler.steps]:
+            self.coordinates = self.coordinates_trace[self.model.scheduler.steps]
         
         if self.process_unit:
             self.process_unit.coordinates = self.coordinates
@@ -119,6 +124,7 @@ class Satellite(ComponentManager):
         component = {
             "id" : self.id,
             "coordinates" : self.coordinates,
+            "coordinates_trace" : self.coordinates_trace,
             "active" : self.active,
             "power" : self.power,
             "min_power" : self.min_power,

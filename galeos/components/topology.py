@@ -153,12 +153,13 @@ class Topology(ComponentManager, nx.Graph):
         """ Method that evaluates whether the distance between two components is within the communication range.
             TODO : Need to develop verification to differentiate the range of different types of links
         """
+        if object_1.coordinates is None or object_2.coordinates is None:
+            return False
+        
         distance_nodes = [object_1.max_connection_range, object_2.max_connection_range]
         ground_distance = geodesic(object_1.coordinates[:2], object_2.coordinates[:2]).kilometers 
         air_distance = (object_1.coordinates[2] - object_2.coordinates[2])/1000
         
-        if yes:
-            print(math.sqrt(ground_distance**2 + air_distance**2))
         return min(distance_nodes) > math.sqrt(ground_distance**2 + air_distance**2)
         
         

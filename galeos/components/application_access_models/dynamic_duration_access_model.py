@@ -51,9 +51,9 @@ class DynamicDurationAccessModel(ComponentManager):
             "history" : self.history,
             "request_provisioning" : self.request_provisioning,
             "duration_values" : self.duration_values,
-            "interal_values" : self.interval_values,
+            "interval_values" : self.interval_values,
             "connection_duration_values" : self.connection_duration_values,
-            "connectin_interval_values" : self.connection_interval_values,
+            "connection_interval_values" : self.connection_interval_values,
             "relationships" : {
                 "user" : {'id' : self.user.id, 'class' : type(self.user).__name__} if self.user else None,
                 "application" : {"id" : self.application.id, "class" : type(self.application).__name__} if self.application else None,
