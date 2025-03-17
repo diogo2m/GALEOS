@@ -88,10 +88,9 @@ class FixedDurationAccessModel(ComponentManager):
         request_time = start
 
         while request_time < start + duration:
-            time = connection_duration if request_time + connection_duration < start + duration else duration - request_time
-            for i in range( time):
+            time = connection_duration if request_time + connection_duration < start + duration else start + duration - request_time
+            for i in range(time):
                 making_request_times[str(i + request_time)] = True
-                                
             request_time += time + connection_interval
             
             connection_duration = next(self.connection_duration_generator)
