@@ -86,7 +86,7 @@ class DynamicDurationAccessModel(ComponentManager):
         request_time = start
         
         while request_time < start + duration:
-            time = connection_duration if request_time + connection_duration < start + duration else duration - request_time
+            time = connection_duration if request_time + connection_duration < request_time + duration else duration
             for i in range( time):
                 making_request_times[str(i + request_time)] = True
                                 
@@ -94,10 +94,11 @@ class DynamicDurationAccessModel(ComponentManager):
             
             connection_duration = next(self.connection_duration_generator)
             connection_interval = next(self.connection_interval_generator)
-        
+            
         self.history.append({
             'start': start,
             'provisioned_time': 0,
+            'is_provisioned' : False,
             'required_provisioning_time' : duration,
             'end' : None,
             'waiting_provisioning': 0,
@@ -119,6 +120,9 @@ class DynamicDurationAccessModel(ComponentManager):
                     if not self.flow is None:
                         self.flow.status = 'finished'
                         self.flow = None
+
+            if app.process_unit is None:
+                return
                         
             if self.flow is None:
                 
@@ -136,7 +140,10 @@ class DynamicDurationAccessModel(ComponentManager):
                         connection_paths.append(path)
                     
                 path = min(connection_paths, key=lambda path: len(path), default=[])
-                
+                 
+                if app.process_unit not in self.model.topology:    
+                    print(app.process_unit)
+                    
                 flow = NetworkFlow(
                     start=self.model.scheduler.steps + 1,
                     source=user,
@@ -145,8 +152,8 @@ class DynamicDurationAccessModel(ComponentManager):
                     data_to_transfer=current_access.get('data_to_transfer', 1),
                     metadata={'type' : 'request_response', 'user' : user}
                 )
-                    
                 self.flow = flow
+               
                 
         if current_access['provisioned_time'] - 1 == current_access['required_provisioning_time'] and app.available:
             current_access['end'] = self.model.scheduler.steps + 1

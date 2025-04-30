@@ -1,5 +1,6 @@
 # Simulator components
 from .components import*
+from .scheduler import*
 
 # Python modules
 from typing import Callable
@@ -27,7 +28,7 @@ class Simulator(ComponentManager):
         topology_management_algorithm : Callable = default_topology_management,
         topology_management_algorithm_parameters : dict = {},
         user_defined_functions : list = [],
-        scheduler : Callable = DefaultScheduler, 
+        scheduler : Callable = Scheduler, 
         dump_interval : int = 100,
         logs_directory : str = "logs",
         ignore_list : list = [], 
@@ -156,10 +157,10 @@ class Simulator(ComponentManager):
                 
             
     def step(self) -> None:
-        self.model.resource_management_algorithm(self, self.model.resource_management_algorithm_parameters)
-        
         # Updating satellite networks
         self.topology_management_algorithm(topology=self.topology, **self.topology_management_parameters)
+        
+        self.resource_management_algorithm(self, self.resource_management_algorithm_parameters)
         
         self.scheduler.step()
             

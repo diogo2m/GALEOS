@@ -1,6 +1,10 @@
 from ..component_manager import ComponentManager
 
 class NetworkFlow(ComponentManager):
+    """ Class that represents specific data flows between a source and a destination.
+    It can represent communication between user and application.
+    Currently does not allocate bandwidth, but this can be implemented using the 'flow_schedule' component in Topology.
+    """
     _instances = []
     _object_count = 0
     
@@ -49,29 +53,11 @@ class NetworkFlow(ComponentManager):
             self.bandwidth[link.id] = 0
             self.last_bandwidth[link.id] = 0
     
-    
-    def collect_metrics(self) -> dict:
-        min_bw = min([bw for bw in self.bandwidth.values() if bw ], default=0)
-        
-        metrics = {
-            "ID" : self.id,
-            "Status" : self.status,
-            "Data to Transfer" : self.data_to_transfer,
-            "Start": self.start,
-            "End": self.end,
-            "Min Bandwidth" : min_bw,
-            "Bandwidth" : self.bandwidth,
-            "Path" : [str(node) for node in self.path],
-            "Type" : self.metadata['type']
-        }
-        
-        return metrics
-          
-            
     def step(self):
+        """ Method responsible for activating the component and ensuring its correct operation throughout the simulation
+        """
         pass
-            
-                
+                      
             
     def export(self) -> dict:
         """ Method that generates a representation of the object in dictionary format to save current context
@@ -89,4 +75,3 @@ class NetworkFlow(ComponentManager):
         }
         
         return component
-        

@@ -34,7 +34,22 @@ class Topology(ComponentManager, nx.Graph):
         """ Method that executes the object's events
         """
         self.remove_invalid_connections()
+        self.model.topology_management_algorithm(topology=self, **self.model.topology_management_parameters)
         self.reroute_flows()
+        self.flow_schedule()
+
+    
+    def flow_schedule(self):
+        # for link in NetworkLink.all():
+        #     flows = []
+
+        #     for flow
+
+        #     allocated = [link['bandwidth'] / len(flows)]
+        pass
+
+            
+
         
         
     def reroute_flows(self):
@@ -46,13 +61,12 @@ class Topology(ComponentManager, nx.Graph):
             
             path = flow.path
             
-
             need_to_reroute = False
             
             if path == []:
                 need_to_reroute = True
                 
-            elif flow.metadata.get('type', 'default') == 'request_response' and path[-1] not in flow.source.network_access_points:
+            elif flow.metadata.get('type', 'default') == 'request_response' and path[0] not in flow.source.network_access_points:
                 need_to_reroute = True
             
             else:
@@ -66,6 +80,7 @@ class Topology(ComponentManager, nx.Graph):
                 if flow.metadata.get('type', 'default') == 'request_response':
                     user = flow.source
                     connection_paths = []
+
                     
                     # Checks all the user's access points and determines if access to the application is possible.
                     for access_point in user.network_access_points:
@@ -124,17 +139,27 @@ class Topology(ComponentManager, nx.Graph):
         """
         for satellite in Satellite.all():
             link_to_removed = []
+
             for neighbor in self[satellite]:
                 link = self[satellite][neighbor]
 
-                if (not isinstance(neighbor, ProcessUnit) and not Topology.within_range(satellite, neighbor)) or not satellite.active:
+                if isinstance(neighbor, ProcessUnit):
+                    continue
+
+                if not Topology.within_range(satellite, neighbor) or not satellite.active:
                     if link in NetworkLink.all():
                         NetworkLink.remove(link)
                     
                     link_to_removed.append((satellite, neighbor))
-                
             for nodes in link_to_removed:
                 self.remove_edge(nodes[0], nodes[1])
+
+    def get_path_delay(self, path):
+        path_delay = nx.classes.function.path_weight(G=self, path=path, weight="delay")    
+        
+        path_delay += path[0].wireless_delay
+
+        return path_delay
 
 
     def get_flow_delay(self, flow) -> int:
@@ -144,12 +169,12 @@ class Topology(ComponentManager, nx.Graph):
             path_delay = nx.classes.function.path_weight(G=self, path=flow.path, weight="delay")    
         
             if isinstance(flow.source, User):
-                path_delay += flow.path[-1].wireless_delay
+                path_delay += flow.path[0].wireless_delay
         return path_delay
     
     
     @staticmethod               
-    def within_range(object_1 : object, object_2 : object, yes = False):
+    def within_range(object_1 : object, object_2 : object):
         """ Method that evaluates whether the distance between two components is within the communication range.
             TODO : Need to develop verification to differentiate the range of different types of links
         """
@@ -159,7 +184,23 @@ class Topology(ComponentManager, nx.Graph):
         distance_nodes = [object_1.max_connection_range, object_2.max_connection_range]
         ground_distance = geodesic(object_1.coordinates[:2], object_2.coordinates[:2]).kilometers 
         air_distance = (object_1.coordinates[2] - object_2.coordinates[2])/1000
+
         
         return min(distance_nodes) > math.sqrt(ground_distance**2 + air_distance**2)
+    
+
+    @staticmethod               
+    def calculate_distance(object_1 : object, object_2 : object):
+        """ Method that calculates the distance between two components.
+            
+        """
+        if object_1.coordinates is None or object_2.coordinates is None:
+            return float('inf')
+        
+        ground_distance = geodesic(object_1.coordinates[:2], object_2.coordinates[:2]).kilometers 
+        air_distance = (object_1.coordinates[2] - object_2.coordinates[2])/1000
+
+        
+        return math.sqrt(ground_distance**2 + air_distance**2)
         
         

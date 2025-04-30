@@ -1,9 +1,9 @@
-from ..application import*
-from ..ground_station import*
-from ..topology import*
-from ..user import*
+from .components.application import*
+from .components.ground_station import*
+from .components.topology import*
+from .components.user import*
 
-class DefaultScheduler:
+class Scheduler:
     """ Class responsible for scaling simulator components
     """
     def __init__(self, model : object):
@@ -32,8 +32,8 @@ class DefaultScheduler:
         for ground_station in GroundStation.all():
             ground_station.step()
         
-        for topology in Topology.all():
-            topology.step()
+        
+        self.model.topology.step()
             
         for process_unit in ProcessUnit.all():
             process_unit.step()

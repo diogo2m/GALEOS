@@ -5,6 +5,9 @@ from typing import List
 import networkx as nx
 
 class Application(ComponentManager):
+    """
+    Class that represents an application which has resource demands and can be requested repeatedly by a user
+    """
     
     _instances = []
     _object_count = 0
@@ -29,7 +32,6 @@ class Application(ComponentManager):
             id = self.__class__._object_count
         self.id = id 
         
-        
         # Sets demands
         self.cpu_demand = cpu_demand
         self.memory_demand = memory_demand
@@ -41,9 +43,10 @@ class Application(ComponentManager):
         # Set SLA
         self.sla = sla
         
-        # Set dependencies labels (e.g. containers, libraries, etc.) required to provision the application 
+        # Set dependency labels (e.g. containers, libraries, etc.) required to provision the application 
         self.dependency_labels = dependency_labels
         
+        # Set architectural dependencies (e.g. GPU) required to provision the application
         self.architectural_demands = architectural_demands
         
         self.user = None
@@ -51,14 +54,19 @@ class Application(ComponentManager):
         
         self.migrations = []
         self.available = False  
+        self._available = False
         self.being_provisioned = False
                 
                 
     def collect_metrics(self) -> dict:
+        """ Method that collects data from a specific instance
+            Can be modified for customized data collection
+        """
         last_migration = self.migrations[-1].copy() if self.migrations else None
         
         if last_migration:
-            last_migration['origin'] = str(last_migration['target'])
+            # Necessary conversion to save to disk
+            last_migration['origin'] = str(last_migration['origin'])
             last_migration['target'] = str(last_migration['target'])
             
         metrics = {
@@ -78,12 +86,17 @@ class Application(ComponentManager):
     
     
     def step(self):    
+        """ Method responsible for activating the component and ensuring its correct operation throughout the simulation
+            Can be modified to implement custom strategies for the migration process
+        """
         if len(self.migrations) and self.migrations[-1]['end'] == None:
             migr = self.migrations[-1]
             # TODO: Implement a dependency system and manage the time in each state
+            # The code below was developed with future implementations in mind
+            # both by the current project developers and potential contributors
             dependencies_on_process_unit = []
             
-           
+            # Every migration currently occurs in the same step it is requested, and there is no simulation of data being transferred
             if migr["status"] == 'waiting':
                 if len(dependencies_on_process_unit) > 0 or len(dependencies_on_process_unit) == len(self.dependency_labels):
                     migr['status'] = 'download_dependencies'
@@ -98,6 +111,7 @@ class Application(ComponentManager):
                     migr['status'] = "finished"
                 else:
                     # TODO: Implement state migration
+                    # Initial structure for future work
                     migr['status'] = 'application_state_migration'
                 
             if migr['status'] == 'waiting':
@@ -119,13 +133,15 @@ class Application(ComponentManager):
                     self.process_unit = migr['target']
                     self.process_unit.applications.append(self)
                     self.being_provisioned = False
-                    self.available = True
-                    
+                    self.available = True    
+
         if self.process_unit and not self.process_unit.available:
             self.available = False
+
             
         elif self.process_unit and not self.available:
             self.available = True
+        self._available = self.available
                     
 
     def export(self):
@@ -150,10 +166,12 @@ class Application(ComponentManager):
     
     
     def provision(self, process_unit : object):
+        """ Method that starts the migration of an application
+        """
         # Enables the flag that the service is being provisioned
         self.being_provisioned = True
         
-
+        # Updates the resource usage of the target server
         process_unit.cpu_demand += self.cpu_demand
         process_unit.memory_demand += self.memory_demand
         process_unit.storage_demand += self.storage_demand
@@ -162,13 +180,26 @@ class Application(ComponentManager):
             "status" : "waiting",
             "origin" : self.process_unit,
             "target" : process_unit,
-            "start" : self.model.scheduler.steps,
+            "start" : self.model.scheduler.steps + 1,
             "end" : None,
             "waiting_time" : 0,
             "download_time" : 0,
             "application_state_migration_time" : 0
         })
-    
-    
-    
-    
+
+
+    def deprovision(self):
+        """ Method that ends the provisioning of an application
+        In a situation where an already allocated application becomes unavailable or needs to be provisioned on another ProcessUnit,
+        this function must be called to ensure all involved components are updated
+        """
+        self.available = False
+        
+        process_unit = self.process_unit
+
+        process_unit.cpu_demand -= self.cpu_demand
+        process_unit.memory_demand -= self.memory_demand
+        process_unit.storage_demand -= self.storage_demand
+        
+        process_unit.applications.remove(self)
+        self.process_unit = None

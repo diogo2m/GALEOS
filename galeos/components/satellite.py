@@ -3,6 +3,10 @@ from ..component_manager import ComponentManager
 from .user import User
 
 class Satellite(ComponentManager):
+    """ Class representing satellites in the aerial part of the topology.
+    They are capable of connecting to GroundStations, Users, or other Satellites.
+    Additionally, they can be linked to a processing unit to enable data processing.
+    """
     _instances = []
     _object_count = 0
         
@@ -14,7 +18,6 @@ class Satellite(ComponentManager):
             wireless_delay : int = 0,
             max_connection_range : int = 500,
             is_gateway : bool = False
-            
         ) -> object:
         
         self.__class__._instances.append(self)
@@ -24,7 +27,7 @@ class Satellite(ComponentManager):
             id = self.__class__._object_count
         self.id = id
 
-        self.name = name if name else f"Satellite {id}"
+        self.name = name if name else str(self)
 
         self.process_unit = None
         self.active = True
@@ -35,12 +38,11 @@ class Satellite(ComponentManager):
         self.power = 0
         self.min_power = 0
 
-        
-        # Satelite coordinates
+        # Satellite coordinates
         self.coordinates = coordinates
         self.coordinates_trace = []
         
-        # Satelite models
+        # Satellite models
         self.mobility_model = None
         self.mobility_model_parameters = {}
         
@@ -67,28 +69,37 @@ class Satellite(ComponentManager):
     
     
     def step(self) -> None:
+        """ Method responsible for activating the component and ensuring its correct operation throughout the simulation
+        """
+        # Prepares to check which users will be within range in the next step
         self.users = []
         
+        # Activates the mobility model if necessary
         if len(self.coordinates_trace) <= self.model.scheduler.steps:
             self.mobility_model(self)
             
+        # Updates the coordinates
         if self.coordinates != self.coordinates_trace[self.model.scheduler.steps]:
             self.coordinates = self.coordinates_trace[self.model.scheduler.steps]
         
+        # Updates the coordinates of the attached ProcessUnit (if any)
         if self.process_unit:
             self.process_unit.coordinates = self.coordinates
             
+        # If coordinates is None, it means the satellite is at a point where it cannot interact with other components.
+        # Therefore, if a processing unit is linked to the satellite, it will be marked as unavailable.
         if self.coordinates is None:
             self.active = False
             
             if self.process_unit:
-                self.process_unit.available
+                process_unit = self.process_unit
+                process_unit.available = False
                 
             return 
         
         failure_occurred = False
         
-        # Check if there was a failure
+        # If the other models are implemented, they will be activated
         if self.failure_model:
             failure_occurred = self.failure_model(self)
             if failure_occurred:
@@ -100,10 +111,9 @@ class Satellite(ComponentManager):
             self.power_generation_model(self)
         
         if self.power_consumption_model:
-            self.power_consumption_model(self,)
+            self.power_consumption_model(self)
         
-        
-        # Check the current power level
+        # If the power level is below the minimum required to operate, the unit’s capabilities are compromised
         if self.power < self.min_power:
             self.active = False
             
@@ -113,11 +123,13 @@ class Satellite(ComponentManager):
         elif not failure_occurred and not self.active:
             self.active = True
         
+        # If operational, the satellite will continue providing connection to users
         if self.active:
             for user in User.all():
                 if self.model.topology.within_range(self, user):
                     user.connect_to_access_point(self)
             
+
     def export(self):
         """ Method that generates a representation of the object in dictionary format to save current context
         """  

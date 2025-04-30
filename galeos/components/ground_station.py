@@ -5,6 +5,11 @@ from .user import User
 
 
 class GroundStation(ComponentManager):
+    """ Class that represents ground stations capable of providing wireless connection, both to satellites and to terrestrial users.
+    It is responsible for connecting the terrestrial network and the LEO satellite network.
+    Additionally, it plays a direct role in the Topology component, requiring GroundStation components to be added to the
+    Topology structure to ensure the simulator works properly.
+    """
     _instances = []
     _object_count = 0
     
@@ -23,11 +28,13 @@ class GroundStation(ComponentManager):
             id = self.__class__._object_count
         self.id = id
         
+        # Its coordinates are fixed
         self.coordinates = coordinates
         
         self.wireless_delay = wireless_delay
         self.max_connection_range = max_connection_range
         
+        # List of currently connected users
         self.users = []
         
         
@@ -53,7 +60,7 @@ class GroundStation(ComponentManager):
     
     
     def step(self):
-        """ Method that executes the object's events
+        """ Method responsible for activating the component and ensuring its correct operation throughout the simulation
         """
         topology = self.model.topology
         
@@ -66,16 +73,20 @@ class GroundStation(ComponentManager):
                 
 
     def connection_to_satellites(self):
+        """ Method that establishes connection between this component and satellites within range that can act as gateways to the LEO network
+        """
         topology = self.model.topology
         
         for satellite in Satellite.all():
             if satellite.coordinates is None:
+                # Satellite is not currently represented
                 continue
             
             if topology.within_range(self, satellite) and satellite.is_gateway:
                 if self.model.topology.has_edge(self, satellite):
                     continue
                 
+                # Create a new Link object
                 link = NetworkLink()
                 
                 link['topology'] = topology

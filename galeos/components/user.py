@@ -50,6 +50,7 @@ class User(ComponentManager):
             # If the application requests provisioning, update the metrics.   
             if access_model.request_provisioning:
                 if app.available:
+                    current_access['is_provisioned'] = True
                     current_access['provisioned_time'] += 1
 
                     if current_access['making_request'].get(str(access_model.model.scheduler.steps)):
@@ -59,7 +60,8 @@ class User(ComponentManager):
 
                         else:
                             current_access['connection_failure_time'] += 1
-                else:
+                else:                    
+                    current_access['is_provisioned'] = True
                     current_access['waiting_provisioning'] += 1
 
 
@@ -97,18 +99,32 @@ class User(ComponentManager):
     def collect_metrics(self):
         """ Defines the object metrics collection
         """     
+        topology = ComponentManager.model.topology
         
         accesses = []
         
         for access_model in self.applications_access_models:
-            last_access = access_model.history[-1]
+            last_access = access_model.history[-1].copy()
+            making_request = last_access['making_request'].get(str(self.model.scheduler.steps), False)
+
+            last_access.pop('making_request')
+            flow = access_model.flow
+            
+            delay = float('inf') 
+
+            if flow and flow.status != 'waiting':
+                delay = topology.get_path_delay(flow.path)
+                delay += flow.path[0].wireless_delay
             
             accesses.append({
                 "Application ID" : access_model.application.id,
                 "Request Provisioning" : access_model.request_provisioning,
-                "Making Request" : last_access['making_request'].get(self.model.scheduler.steps, False),
-                "Connectivity" :  access_model.flow and access_model.flow.status == 'active',
+                "Is Provisioned" : last_access['is_provisioned'],
+                "Provisioning" : access_model.application._available,
+                "Making Request" : making_request,
+                "Connectivity" :  True if access_model.flow and access_model.flow.path != [] else False,
                 "Path" : [str(node) for node in access_model.flow.path] if access_model.flow else [], 
+                "Delay" : delay
             })
         
         metrics = {

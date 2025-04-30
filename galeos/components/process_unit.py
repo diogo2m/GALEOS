@@ -1,6 +1,10 @@
 from ..component_manager import ComponentManager
 
 class ProcessUnit(ComponentManager):
+    """ Class that represents an infrastructure component with any computational capabilities (e.g. datacenters, edge servers).
+    Additionally, it interacts with other components through the Topology component, which means a ProcessUnit must be properly
+    integrated into the topology structure.
+    """
     
     _instances = []
     _object_count = 0
@@ -26,17 +30,21 @@ class ProcessUnit(ComponentManager):
         self.model_name = model_name
         self.coordinates = coordinates
         
+        # Total computational capacity
         self.cpu = cpu
         self.memory = memory
         self.storage = storage
         self.power = 0
         
+        # Current demands
         self.cpu_demand = 0
         self.memory_demand = 0
         self.storage_demand = 0
         
+        # Architectural specifications
         self.architecture = architecture
         
+        # Possible integration with relevant models
         self.power_generation_model = None
         self.power_generation_model_parameters = {}
         
@@ -46,7 +54,7 @@ class ProcessUnit(ComponentManager):
         self.failure_model = None
         self.failure_model_parameters = {}
         
-        
+        # Applications currently allocated in the unit
         self.applications = []
                 
         # Process Unit availability status
@@ -54,6 +62,9 @@ class ProcessUnit(ComponentManager):
 
 
     def collect_metrics(self) -> dict:
+        """ Method that collects data from a specific instance
+            Can be modified for customized data collection
+        """
         metrics = {
             "ID" : self.id,
             "Coordinates" : self.coordinates,
@@ -72,12 +83,13 @@ class ProcessUnit(ComponentManager):
     
     
     def step(self):
+        """ Method responsible for activating the component and ensuring its correct operation throughout the simulation
+        """
+        # Updates the status of applications already allocated and which became unavailable for various reasons
         for app in self.applications:
             if app.process_unit and not app.process_unit.available:
                 app.available = False
-
-            elif app.process_unit and not app.available:
-                app.available = True
+                app.deprovision()
       
        
     def export(self) -> dict:
@@ -112,10 +124,10 @@ class ProcessUnit(ComponentManager):
         return component
     
     def has_capacity_to_host(self, application : object) -> None:
+        """ Method that checks whether there are enough available resources to host an application
+        """
         cpu_demand = self.cpu_demand + application.cpu_demand
         memory_demand = self.memory_demand + application.memory_demand
         storage_demand = self.storage_demand + application.storage_demand
         
         return self.cpu >= cpu_demand and self.memory >= memory_demand and self.storage >= storage_demand
-    
-    

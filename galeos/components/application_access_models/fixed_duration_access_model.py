@@ -88,7 +88,7 @@ class FixedDurationAccessModel(ComponentManager):
         request_time = start
 
         while request_time < start + duration:
-            time = connection_duration if request_time + connection_duration < start + duration else start + duration - request_time
+            time = connection_duration if request_time + connection_duration < request_time + duration else duration
             for i in range(time):
                 making_request_times[str(i + request_time)] = True
             request_time += time + connection_interval
@@ -100,6 +100,7 @@ class FixedDurationAccessModel(ComponentManager):
             'start': start,
             'end': start + duration,
             'provisioned_time': 0,
+            'is_provisioned' : False,
             'waiting_provisioning': 0,
             'access_time': 0,
             'connection_failure_time': 0,
@@ -118,7 +119,10 @@ class FixedDurationAccessModel(ComponentManager):
                 if self.flow.target != app.process_unit:
                     self.flow.status = 'finished'
                     self.flow = None
-                        
+
+            if app.process_unit is None:
+                return
+                 
             if self.flow is None:
                 
                 connection_paths = []
