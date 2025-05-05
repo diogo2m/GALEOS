@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Prometheus</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        h2, h1 {
+            text-align: center;
+            font-family: 'Ubuntu', 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+            font-size: 1.5rem;
+            color: #287bff;
+            font-weight: 600;
+        }
+
+        h1{
+            font-size: 2rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .chart-container {
+            width: 100%;
+            height: auto;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            overflow-x: hidden;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>GALEOS - DASHBOARD</h1>
+    </div>
+    <div class="dashboard">
+        <div>
+            <h2>AVAILABLE SATELLITES</h2>
+            <div class="chart-container">
+                <canvas id="satellitesChart"></canvas>
+            </div>
+        </div>
+        <div>
+            <h2>CPU</h2>
+            <div class="chart-container">
+                <canvas id="cpuChart"></canvas>
+            </div>
+        </div>
+        <div>
+            <h2>MEMORY</h2>
+            <div class="chart-container">
+                <canvas id="memoryChart"></canvas>
+            </div>
+        </div>
+        <div>
+            <h2>STORAGE</h2>
+            <div class="chart-container">
+                <canvas id="storageChart"></canvas>
+            </div>
+        </div>
+        <div>
+            <h2>POWER</h2>
+            <div class="chart-container">
+                <canvas id="powerChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+        const metrics = [
+            { id: 'satellitesChart', label: 'Active Satellites', query: 'request_provisioning' },
+            { id: 'cpuChart', label: 'CPU Usage', query: 'cpu_usage' },
+            { id: 'memoryChart', label: 'Memory Usage', query: 'memory_usage' },
+            { id: 'storageChart', label: 'Storage Usage', query: 'storage_usage' },
+            { id: 'powerChart', label: 'Power Usage', query: 'power_consumption' }
+        ];
+
+        function convertToTimeFormat(timestamp) {
+            const date = new Date(timestamp * 1000);
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        function createChart(ctx, label) {
+            return new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label, data: [], borderColor: 'rgba(75, 192, 192, 1)', fill: false, tension: 0.5 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: { type: 'category', position: 'bottom', ticks: { autoSkip: true, maxTicksLimit: 20 }, title: { display: true, text: 'Tempo (HH:MM)' } },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        const charts = {};
+        const dataStorage = {};
+
+        metrics.forEach(metric => {
+            const ctx = document.getElementById(metric.id).getContext('2d');
+            charts[metric.id] = createChart(ctx, metric.label);
+            dataStorage[metric.id] = { xvalues: [], yvalues: [] };
+        });
+
+        const TIME_WINDOW = 30; // Janela de tempo fixa (em segundos)
+        const UPDATE_INTERVAL = 5000; // Intervalo de atualização em milissegundos
+
+        function updateCharts() {
+            metrics.forEach(metric => {
+                fetch(`http://localhost:9090/api/v1/query?query=${metric.query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const newTimestamp = parseFloat(data.data.result[0].value[0]);
+                        const newValue = parseFloat(data.data.result[0].value[1]);
+                        const newTime = convertToTimeFormat(newTimestamp);
+                        
+                        const storage = dataStorage[metric.id];
+                        storage.xvalues.push(newTimestamp);
+                        storage.yvalues.push(newValue);
+                        
+                        const now = Math.floor(Date.now() / 1000); // Timestamp atual
+                        
+                        // Remover pontos de dados antigos para manter apenas os últimos X minutos
+                        while (storage.xvalues.length > 0 && storage.xvalues[0] < now - TIME_WINDOW) {
+                            storage.xvalues.shift();
+                            storage.yvalues.shift();
+                        }
+                        
+                        // Atualiza os dados do gráfico
+                        const chart = charts[metric.id];
+                        chart.data.labels = storage.xvalues.map(convertToTimeFormat);
+                        chart.data.datasets[0].data = storage.yvalues;
+                        chart.update();
+                    })
+                    .catch(error => console.error(`Erro ao buscar ${metric.label}:`, error));
+            });
+        }
+
+        setInterval(updateCharts, 5000);
+        updateCharts();
+    </script>
+</body>
+</html>
