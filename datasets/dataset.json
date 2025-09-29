@@ -1,0 +1,53 @@
+{
+    "User" : [
+        {
+            "id" : 1,
+            "label" : "primeiro",
+            "relationships":  {
+                "applications" : [
+                {
+                   "id" : 1,
+                   "class" : "Application" 
+                }
+                ] 
+            }
+        },
+        {
+            "id" : 2,
+            "label" : "segundo",
+            "relationships" : {
+                "applications" : 
+                {
+                   "id" : 2,
+                   "class" : "Application" 
+                }
+            
+            }
+        }
+
+    ],
+
+    "Application" : [
+        {   
+            "id" : 1,
+            "relationships" : {
+                "users" : [
+                {
+                   "id" : 1,
+                   "class" : "User" 
+                }
+                ] 
+            }
+        },
+        {   
+            "id" : 2,
+            "relationships" : {
+                "users" : [{
+                    "id" : 2,
+                    "class" : "User"
+                }]
+            }
+        }
+
+    ]
+}
