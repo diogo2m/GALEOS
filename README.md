@@ -21,7 +21,7 @@ git remote add origin [link of git repository]
 
 - Fetch the Latest Changes
 ```bash
-git pull origin main
+git pull origin containerized
 ```
 
 ## Usage
@@ -36,7 +36,7 @@ docker run -p 8000:8000 -p 9090:9090 galeos
 ```
 
 - Access the port 8000 in your browser:
-    - [localhost:8000](http://localhost8000)
+    - [localhost:8000/index.html](http://localhost8000/index.html)
 
 ## Authors
 - [@Pedrohsgarci4](https://github.com/Pedrohsgarci4)
