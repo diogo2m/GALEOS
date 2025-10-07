@@ -1,6 +1,7 @@
 # Python modules
 import json
 
+
 class ComponentManager:
     model = None
     

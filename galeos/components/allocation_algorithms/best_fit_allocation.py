@@ -32,7 +32,7 @@ def best_fit_allocation(model, parameters):
                 process_unit = access_model.application.process_unit
                 # If not directly connected to a network access point
                 if not any(
-                    (process_unit in model.topology.neighbors(access_point) for access_point in user.network_access_points)
+                    ( process_unit in model.topology.neighbors(access_point)  for access_point in user.network_access_points)
                     ) or user.network_access_points == []:
                     applications_to_be_allocated.append(access_model)
 

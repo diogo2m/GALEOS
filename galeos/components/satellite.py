@@ -5,7 +5,7 @@ from .user import User
 class Satellite(ComponentManager):
     """ Class representing satellites in the aerial part of the topology.
     They are capable of connecting to GroundStations, Users, or other Satellites.
-    Additionally, they can be linked to a processing unit to enable data processing.
+    Additionally, they can be linked to a process unit to enable data processing.
     """
     _instances = []
     _object_count = 0
@@ -87,7 +87,7 @@ class Satellite(ComponentManager):
             self.process_unit.coordinates = self.coordinates
             
         # If coordinates is None, it means the satellite is at a point where it cannot interact with other components.
-        # Therefore, if a processing unit is linked to the satellite, it will be marked as unavailable.
+        # Therefore, if a process unit is linked to the satellite, it will be marked as unavailable.
         if self.coordinates is None:
             self.active = False
             

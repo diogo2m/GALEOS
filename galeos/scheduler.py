@@ -3,6 +3,7 @@ from .components.ground_station import*
 from .components.topology import*
 from .components.user import*
 
+
 class Scheduler:
     """ Class responsible for scaling simulator components
     """

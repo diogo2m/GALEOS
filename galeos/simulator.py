@@ -143,6 +143,8 @@ class Simulator(ComponentManager):
             
         
     def initialize_logs(self) -> None:
+        os.makedirs(self.logs_directory, exist_ok=True)
+
         for component_class in ComponentManager.__subclasses__():
             if component_class not in self.ignore_list  + [self.__class__]:
                 
@@ -179,7 +181,7 @@ class Simulator(ComponentManager):
         
         if self.scheduler.steps == self.last_dump + self.dump_interval:
             self.dump_data()
-            self.last_dump = self.schedule.steps
+            self.last_dump = self.scheduler.steps
                         
                         
     def dump_data(self) -> None:
@@ -207,6 +209,7 @@ class Simulator(ComponentManager):
         self.monitor()
             
         while self.running:
+            print("Step ", self.scheduler.steps)
             self.step()
             self.monitor()
             

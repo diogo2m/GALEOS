@@ -15,6 +15,7 @@ class Topology(ComponentManager, nx.Graph):
     _instances = []
     _object_count = 0
 
+
     def __init__(self, obj_id: int = 0, existing_graph: nx.Graph = None) -> object:
        
         self.__class__._instances.append(self)
@@ -40,17 +41,9 @@ class Topology(ComponentManager, nx.Graph):
 
     
     def flow_schedule(self):
-        # for link in NetworkLink.all():
-        #     flows = []
-
-        #     for flow
-
-        #     allocated = [link['bandwidth'] / len(flows)]
         pass
 
-            
 
-        
         
     def reroute_flows(self):
         """ Method that performs the routing of flows whose paths are now invalid
@@ -153,6 +146,7 @@ class Topology(ComponentManager, nx.Graph):
                     link_to_removed.append((satellite, neighbor))
             for nodes in link_to_removed:
                 self.remove_edge(nodes[0], nodes[1])
+
 
     def get_path_delay(self, path):
         path_delay = nx.classes.function.path_weight(G=self, path=path, weight="delay")    

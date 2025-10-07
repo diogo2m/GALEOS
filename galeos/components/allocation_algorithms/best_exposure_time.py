@@ -4,7 +4,6 @@ from ..user import User
 
 from math import sqrt
 from geopy.distance import geodesic
-from functools import partial
 
 import networkx as nx
 
@@ -74,7 +73,7 @@ def best_exposure_time(model, _):
     for access_model in sorted(applications_to_be_allocated, key=key):
         selected = None
         time = 0
-        # Look for ProcessUnits directly connected to network access points
+        # Look for ProcessinfUnits directly connected to network access points
         for access_point in access_model.user.network_access_points:
             if isinstance(access_point, Satellite) and getattr(access_point, 'process_unit') is not None:
                 process_unit = access_point.process_unit
@@ -93,13 +92,13 @@ def best_exposure_time(model, _):
 
         # Try to allocate on ground network
         if selected is None:
-            for unit in ProcessUnit.all():
-                # Check if communication with this server is possible
-                if unit.has_capacity_to_host(access_model.application) and unit.available and has_path(model.topology, access_model.user, unit):
-                    access_model.application.provision(unit)
+            for process_unit in ProcessUnit.all():
+                # Check if communication with this process_unit is possible
+                if process_unit.has_capacity_to_host(access_model.application) and process_unit.available and has_path(model.topology, access_model.user, process_unit):
+                    access_model.application.provision(process_unit)
                     continue
 
-        # Deallocate application from current server
+        # Deallocate application from current process_unit
         if access_model.application.available:
             access_model.application.deprovision()
         continue

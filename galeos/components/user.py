@@ -40,8 +40,8 @@ class User(ComponentManager):
         self.network_access_points = []
 
         self.max_connection_range = max_connection_range
-        
-        
+
+
     def step(self):
         for access_model in self.applications_access_models:
             app = access_model.application    
@@ -61,7 +61,7 @@ class User(ComponentManager):
                         else:
                             current_access['connection_failure_time'] += 1
                 else:                    
-                    current_access['is_provisioned'] = True
+                    current_access['is_provisioned'] = False
                     current_access['waiting_provisioning'] += 1
 
 
@@ -116,6 +116,7 @@ class User(ComponentManager):
                 delay = topology.get_path_delay(flow.path)
                 delay += flow.path[0].wireless_delay
             
+            
             accesses.append({
                 "Application ID" : access_model.application.id,
                 "Request Provisioning" : access_model.request_provisioning,
@@ -169,6 +170,5 @@ class User(ComponentManager):
     def connect_to_access_point(self, access_point : object):
         self.network_access_points.append(access_point)
         access_point.users.append(self)
-        
-        
-    
+
+

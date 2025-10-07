@@ -141,8 +141,6 @@ class DynamicDurationAccessModel(ComponentManager):
                     
                 path = min(connection_paths, key=lambda path: len(path), default=[])
                  
-                if app.process_unit not in self.model.topology:    
-                    print(app.process_unit)
                     
                 flow = NetworkFlow(
                     start=self.model.scheduler.steps + 1,

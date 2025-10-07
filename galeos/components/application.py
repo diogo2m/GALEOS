@@ -137,10 +137,13 @@ class Application(ComponentManager):
 
         if self.process_unit and not self.process_unit.available:
             self.available = False
-
             
         elif self.process_unit and not self.available:
             self.available = True
+
+        elif self.process_unit is None and self.available:
+            self.available = False
+            
         self._available = self.available
                     
 
