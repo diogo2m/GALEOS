@@ -78,6 +78,7 @@ class FixedDurationAccessModel(ComponentManager):
                 exit()
             setattr(self, 'connection_interval_generator', cycle(self.connection_interval_values))
             
+        # Obtenção dos valores para este ciclo de acesso
         interval = next(self.interval_generator)
         duration = next(self.duration_generator)
         
@@ -86,28 +87,39 @@ class FixedDurationAccessModel(ComponentManager):
         
         making_request_times = {}
         request_time = start
+        
+        # Define o limite absoluto de término
+        end_time = start + duration
 
-        while request_time < start + duration:
-            time = connection_duration if request_time + connection_duration < request_time + duration else duration
+        while request_time < end_time:
+            time_remaining = end_time - request_time
+            
+            # O tempo da rajada é o menor valor entre a duração da conexão e o tempo restante
+            time = min(connection_duration, time_remaining)
+            
+            # Preenche os tempos de requisição
             for i in range(time):
+                print(self.id,i)
                 making_request_times[str(i + request_time)] = True
+            
+            # Avança o tempo (tempo de conexão + intervalo de silêncio)
             request_time += time + connection_interval
             
+            # Prepara os valores para a próxima iteração do loop (se houver)
             connection_duration = next(self.connection_duration_generator)
             connection_interval = next(self.connection_interval_generator)
 
         self.history.append({
             'start': start,
-            'end': start + duration,
+            'end': end_time,
             'provisioned_time': 0,
             'is_provisioned' : False,
             'waiting_provisioning': 0,
             'access_time': 0,
             'connection_failure_time': 0,
             'making_request': making_request_times,
-            'next_access' : start + duration + interval,
+            'next_access' : end_time + interval,
         })
-
     
     def update_access(self) -> None:
         user = self.user

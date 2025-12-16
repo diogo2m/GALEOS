@@ -95,10 +95,7 @@ def best_exposure_time(model, _):
             for process_unit in ProcessUnit.all():
                 # Check if communication with this process_unit is possible
                 if process_unit.has_capacity_to_host(access_model.application) and process_unit.available and has_path(model.topology, access_model.user, process_unit):
-                    access_model.application.provision(process_unit)
-                    continue
+                    if process_unit != access_model.application.process_unit:
+                        access_model.application.provision(process_unit)
+                        return
 
-        # Deallocate application from current process_unit
-        if access_model.application.available:
-            access_model.application.deprovision()
-        continue

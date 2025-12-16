@@ -64,6 +64,7 @@ class DynamicDurationAccessModel(ComponentManager):
         return component
         
     def get_next_access(self, start):
+        # Inicialização dos geradores
         if not hasattr(self, 'duration_generator'):
             setattr(self, 'duration_generator', cycle(self.duration_values))
             
@@ -76,6 +77,7 @@ class DynamicDurationAccessModel(ComponentManager):
         if not hasattr(self, 'connection_interval_generator'):
             setattr(self, 'connection_interval_generator', cycle(self.connection_interval_values))
             
+        # Obtenção dos valores
         interval = next(self.interval_generator)
         duration = next(self.duration_generator)
         
@@ -85,9 +87,17 @@ class DynamicDurationAccessModel(ComponentManager):
         making_request_times = {}
         request_time = start
         
-        while request_time < start + duration:
-            time = connection_duration if request_time + connection_duration < request_time + duration else duration
-            for i in range( time):
+        # Define o limite absoluto de término
+        end_time = start + duration
+        
+        while request_time < end_time:
+            # CORREÇÃO: Calcula o tempo restante real
+            time_remaining = end_time - request_time
+            
+            # O tempo da rajada é o menor valor entre a duração da conexão e o tempo restante
+            time = min(connection_duration, time_remaining)
+            
+            for i in range(time):
                 making_request_times[str(i + request_time)] = True
                                 
             request_time += time + connection_interval
@@ -100,14 +110,13 @@ class DynamicDurationAccessModel(ComponentManager):
             'provisioned_time': 0,
             'is_provisioned' : False,
             'required_provisioning_time' : duration,
-            'end' : None,
+            'end' : None, # Diferença específica do DynamicModel
             'waiting_provisioning': 0,
             'access_time': 0,
             'connection_failure_time': 0,
             'making_request': making_request_times,
-            'next_access' : start + duration + interval,
-        })
-        
+            'next_access' : end_time + interval,
+        })   
     
     def update_access(self) -> None:
         user = self.user
