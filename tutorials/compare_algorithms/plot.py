@@ -2,201 +2,139 @@ import json
 import os
 import matplotlib.pyplot as plt
 
-VALUES = ['ProcessUnit_11', 'ProcessUnit_23', 'ProcessUnit_20', 'ProcessUnit_15', 'ProcessUnit_2', 'ProcessUnit_3', 'ProcessUnit_27', 'ProcessUnit_8', 'ProcessUnit_22', 'ProcessUnit_24', 'ProcessUnit_10', 'ProcessUnit_26', 'ProcessUnit_13', 'ProcessUnit_16', 'ProcessUnit_28', 'ProcessUnit_12', 'ProcessUnit_21', 'ProcessUnit_14', 'ProcessUnit_17', 'ProcessUnit_9', 'ProcessUnit_6', 'ProcessUnit_7', 'ProcessUnit_1', 'ProcessUnit_19', 'ProcessUnit_5', 'ProcessUnit_4', 'ProcessUnit_18', 'ProcessUnit_25']
-
-def compare_algorithms(*algorithm_names, current_path):
+# Função principal de comparação com suporte a médias
+def compare_algorithms_averaged(algorithm_names, scenarios, num_repetitions, current_path):
     markers = ['o', 'x', 's', '^', 'D', '*', 'v', '+']
 
-    algorithm_steps = {}
-    algorithm_provisioned = {}
-    algorithm_total_delay = {}
-    total_provisioned_counts = {}
-    algorithm_not_provisioned = {}
-    p = {}
-
-
-    for algo in algorithm_names:
-        algo_path = os.path.join(current_path, algo, 'User.jsonl')  
-        steps = []
-        provisioned = []
-        total_delay = []
-        total_not_provisioned = []
-
-        if not os.path.isfile(algo_path):
-            print(f"Warning: File not found for {algo} at {algo_path}")
-            continue
-
-        with open(algo_path, 'r') as file:
-            last_accesses = {}
-            current_access = {}
-            waiting = {}
-            for line in file:
-                data = json.loads(line)
-                step = data['Step']
-                step_provisioned = 0
-                delay_prov = 0
-                not_provisioned = 0
-                
-
-                for metric in data['metrics']:
-                    current_access = metric['Access to Applications'][0] # Assuming only one application per user
-
-                    if last_accesses.get(metric['ID']) is None:
-                        last_accesses[metric['ID']] = current_access
-                        waiting[metric['ID']] = []
-                        continue
-                    
-                    last_access = last_accesses[metric['ID']]
-                    # if last_access['Request Provisioning'] and ( current_access['Provisioning'] == False):
-                    if last_access['Request Provisioning'] and ( not current_access['Is Provisioned']):
-                        not_provisioned += 1
-                        
-                        waiting[metric['ID']].append(step)
-                    # if current_access['Provisioning']:
-                    if current_access['Is Provisioned'] or current_access['Provisioning'] == False:
-                        step_provisioned += 1
-                        delay_prov += current_access['Delay'] if current_access['Delay'] != float('inf') else 0
-                    last_accesses[metric['ID']] = current_access
-
-                steps.append(step)
-                provisioned.append(step_provisioned)
-                total_delay.append(delay_prov)
-                total_not_provisioned.append(not_provisioned)
-
-
-        count = 0
-
-        for id in waiting:
-            for i in range(len(waiting[id])-1):
-                if waiting[id][i+1] - waiting[id][i] > 1:
-                    count += 1
-
-        p[algo] = count
-
-        print(f'{algo} \t\t=> {sum(provisioned)}')
-
+    # Gera um conjunto de gráficos para CADA cenário
+    for scenario in scenarios:
+        print(f"Processando gráficos para o cenário: {scenario}")
         
-                   
-        algorithm_steps[algo] = steps
-        algorithm_provisioned[algo] = provisioned
-        algorithm_total_delay[algo] = total_delay
-        algorithm_not_provisioned[algo] = total_not_provisioned
-        total_provisioned_counts[algo] = sum(provisioned)
-
-
-    # print([ p[algo] for algo in algorithm_not_provisioned])
-    # Plot 1: Number of provisioned application
-    plt.figure(figsize=(12, 7))
-    for i, algo in enumerate(algorithm_names):
-        if algo in algorithm_steps:
-            plt.plot(algorithm_steps[algo], algorithm_provisioned[algo], label=algo, marker=markers[i % len(markers)])
-    plt.xlabel('Step')
-    plt.ylabel('Number of Provisioned Applications')
-    plt.title('Provisioned Applications per Algorithm')
-    plt.grid(True)
-    plt.legend()
-    plt.savefig("tutorials/compare_algorithms/provisioned.png")
-
-    # Plot 2: Total delay
-    plt.figure(figsize=(12, 7))
-    for i, algo in enumerate(algorithm_names):
-        if algo in algorithm_steps:
-            plt.plot(algorithm_steps[algo], algorithm_total_delay[algo], label=algo, marker=markers[i % len(markers)])
-    plt.xlabel('Step')
-    plt.ylabel('Total Delay')
-    plt.title('Total Provisioning Delay per Algorithm')
-    plt.grid(True)
-    plt.legend()
-    plt.savefig('tutorials/compare_algorithms/delay.png')
-
-    # Plot 2: Applications not provisioned
-    plt.figure(figsize=(12, 7))
-    for i, algo in enumerate(algorithm_names):
-        if algo in algorithm_steps:
-            plt.plot(algorithm_steps[algo], algorithm_not_provisioned[algo], label=algo, marker=markers[i % len(markers)])
-    plt.xlabel('Step')
-    plt.ylabel('Applications Not Provisioned')
-    plt.title('Total Not Provisioned Applications per Algorithm')
-    plt.grid(True)
-    plt.legend()
-    plt.savefig('tutorials/compare_algorithms/not_provisioned.png')
-
-    # Get total migrations and generate bar chart
-    total_migrations_counts, algorithm_migr = plot_migrations(*(algorithm_names), current_path=current_path)
-
-    # Plot 3: Total provisioned and migrations (bar plot)
-    plt.figure(figsize=(10, 6))
-    x = range(len(algorithm_names))
-    provision_vals = [total_provisioned_counts.get(algo, 0) for algo in algorithm_names]
-    migration_vals = [total_migrations_counts.get(algo, 0) for algo in algorithm_names]
-
-    bar_width = 0.35
-    plt.bar(x, provision_vals, width=bar_width, label='Total Provisioned', color='skyblue')
-    plt.bar([p + bar_width for p in x], migration_vals, width=bar_width, label='Total Migrations', color='salmon')
-
-    plt.xticks([p + bar_width / 2 for p in x], algorithm_names)
-    plt.ylabel('Count')
-    plt.title('Total Provisioned vs Migrations per Algorithm')
-    plt.legend()
-    plt.grid(axis='y')
-    plt.tight_layout()
-    plt.savefig("tutorials/compare_algorithms/total_bar_chart.png")
-
-
-def plot_migrations(*algorithm_names, current_path):
-    algorithm_steps = {}
-    algorithm_migrations = {}
-    total_migrations_counts = {}
-
-    for algo in algorithm_names:
-        algo_path = os.path.join(current_path, algo, 'Application.jsonl')  
-        steps = []
-        migrations = []
-        allocations_in_ground_infraestructure = 0
-        allocations_in_air_infraestructure = 0 
-
-        if not os.path.isfile(algo_path):
-            print(f"Warning: File not found for {algo} at {algo_path}")
-            continue
-
-        with open(algo_path, 'r') as file:
-            x = 0
-            for line in file:
-                data = json.loads(line)
-                step = data['Step']
-                current_migrations = 0 + x
-
-                for metric in data['metrics']:
-                    migr = metric.get('Last Migration')
-                    if migr and migr.get('start') == step :
-                        current_migrations += 1
-
-                    if migr and migr.get('start') == step and migr['target'] in VALUES:
-                        allocations_in_ground_infraestructure += 1
-                    elif migr and migr.get('start') == step and migr['target'] not in VALUES:
-                        allocations_in_air_infraestructure += 1
+        # Dicionários para guardar os dados médios de cada algoritmo
+        # Formato: algo_name -> [valor_step_0, valor_step_1, ...]
+        avg_steps = {} 
+        avg_provisioned = {}
+        avg_delay = {}
+        avg_not_provisioned = {}
+        
+        for algo in algorithm_names:
+            # Listas temporárias para acumular dados de todas as repetições
+            # ex: reps_provisioned = [ [prov_rep1_step0, ...], [prov_rep2_step0, ...] ]
+            reps_provisioned = []
+            reps_delay = []
+            reps_not_provisioned = []
+            
+            captured_steps = [] # Para guardar o eixo X
+            
+            for rep in range(1, num_repetitions + 1):
+                # Caminho: Algo / Scenario / repX / User.jsonl
+                file_path = os.path.join(current_path, algo, scenario, f"rep{rep}", 'User.jsonl')
                 
-                x = current_migrations
+                if not os.path.isfile(file_path):
+                    print(f"  AVISO: Arquivo não encontrado: {file_path}")
+                    continue
+                
+                # Leitura do arquivo (lógica original adaptada)
+                curr_steps = []
+                curr_prov = []
+                curr_delay = []
+                curr_not_prov = []
+                
+                with open(file_path, 'r') as file:
+                    last_accesses = {}
+                    for line in file:
+                        data = json.loads(line)
+                        step = data['Step']
+                        
+                        step_provisioned = 0
+                        delay_prov = 0
+                        not_provisioned = 0
+                        
+                        for metric in data['metrics']:
+                            current_access = metric['Access to Applications'][0]
 
-                steps.append(step)
-                migrations.append(current_migrations)
+                            if last_accesses.get(metric['ID']) is None:
+                                last_accesses[metric['ID']] = current_access
+                                continue
+                            
+                            last_access = last_accesses[metric['ID']]
+                            
+                            if last_access['Request Provisioning'] and (not current_access['Is Provisioned']):
+                                not_provisioned += 1
+                                
+                            if current_access['Is Provisioned'] or current_access['Provisioning'] == False:
+                                step_provisioned += 1
+                                delay_prov += current_access['Delay'] if current_access['Delay'] != float('inf') else 0
+                            
+                            last_accesses[metric['ID']] = current_access
+                        
+                        curr_steps.append(step)
+                        curr_prov.append(step_provisioned)
+                        curr_delay.append(delay_prov)
+                        curr_not_prov.append(not_provisioned)
 
-        algorithm_steps[algo] = steps
-        algorithm_migrations[algo] = migrations
-        total_migrations_counts[algo] = sum(migrations)
+                reps_provisioned.append(curr_prov)
+                reps_delay.append(curr_delay)
+                reps_not_provisioned.append(curr_not_prov)
+                
+                if not captured_steps:
+                    captured_steps = curr_steps
+            
+            # Calcular Médias (se houver dados)
+            if reps_provisioned:
+                # Determina o tamanho mínimo (caso alguma simulação tenha parado antes)
+                min_len = min(len(r) for r in reps_provisioned)
+                
+                # Função auxiliar para média de lista de listas
+                def calc_avg(list_of_lists, length):
+                    result = []
+                    for i in range(length):
+                        soma = sum(l[i] for l in list_of_lists)
+                        result.append(soma / len(list_of_lists))
+                    return result
+                
+                avg_steps[algo] = captured_steps[:min_len]
+                avg_provisioned[algo] = calc_avg(reps_provisioned, min_len)
+                avg_delay[algo] = calc_avg(reps_delay, min_len)
+                avg_not_provisioned[algo] = calc_avg(reps_not_provisioned, min_len)
 
-        print(f'{algo} \t\t=> Terrestre: {allocations_in_ground_infraestructure}\tLEO: {allocations_in_air_infraestructure}')
+        # --- Plotagem ---
+        
+        # 1. Provisioned Applications
+        plt.figure(figsize=(12, 7))
+        for i, algo in enumerate(algorithm_names):
+            if algo in avg_provisioned:
+                plt.plot(avg_steps[algo], avg_provisioned[algo], label=algo, marker=markers[i % len(markers)])
+        plt.xlabel('Step')
+        plt.ylabel('Avg Number of Provisioned Applications')
+        plt.title(f'Provisioned Applications - {scenario.capitalize()}')
+        plt.grid(True)
+        plt.legend()
+        plt.savefig(os.path.join(current_path, f"provisioned_{scenario}.png"))
+        plt.close()
 
-    # Plot: Migrations per step
-    plt.figure(figsize=(12, 7))
-    for i, algo in enumerate(algorithm_names):
-        if algo in algorithm_steps:
-            plt.plot(algorithm_steps[algo], algorithm_migrations[algo], label=algo, marker='x')
-    plt.xlabel('Step')
-    plt.ylabel('Number of Migrations')
-    plt.title('Migrations per Algorithm')
-    plt.grid(True)
-    plt.legend()
-    plt.savefig("tutorials/compare_algorithms/migrations.png")
+        # 2. Total Delay
+        plt.figure(figsize=(12, 7))
+        for i, algo in enumerate(algorithm_names):
+            if algo in avg_delay:
+                plt.plot(avg_steps[algo], avg_delay[algo], label=algo, marker=markers[i % len(markers)])
+        plt.xlabel('Step')
+        plt.ylabel('Avg Total Delay')
+        plt.title(f'Total Provisioning Delay - {scenario.capitalize()}')
+        plt.grid(True)
+        plt.legend()
+        plt.savefig(os.path.join(current_path, f"delay_{scenario}.png"))
+        plt.close()
 
-    return total_migrations_counts, algorithm_migrations
+        # 3. Not Provisioned
+        plt.figure(figsize=(12, 7))
+        for i, algo in enumerate(algorithm_names):
+            if algo in avg_not_provisioned:
+                plt.plot(avg_steps[algo], avg_not_provisioned[algo], label=algo, marker=markers[i % len(markers)])
+        plt.xlabel('Step')
+        plt.ylabel('Avg Applications Not Provisioned')
+        plt.title(f'Not Provisioned Applications - {scenario.capitalize()}')
+        plt.grid(True)
+        plt.legend()
+        plt.savefig(os.path.join(current_path, f"not_provisioned_{scenario}.png"))
+        plt.close()
